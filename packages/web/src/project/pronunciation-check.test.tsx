@@ -97,6 +97,9 @@ it("says what the voice guessed and what it was heard saying more than one way",
               high: 0.69,
               spread: 0.36,
               uneven: true,
+              saidAs: [],
+              ipa: [],
+              different: false,
             },
             {
               name: "Gygax",
@@ -106,6 +109,9 @@ it("says what the voice guessed and what it was heard saying more than one way",
               high: 0.97,
               spread: 0.18,
               uneven: false,
+              saidAs: [],
+              ipa: [],
+              different: false,
             },
           ],
           uneven: [
@@ -117,13 +123,18 @@ it("says what the voice guessed and what it was heard saying more than one way",
               high: 0.69,
               spread: 0.36,
               uneven: true,
+              saidAs: [],
+              ipa: [],
+              different: false,
             },
           ],
+          different: [],
           words: 21548,
           confidence: 0.94,
         },
         notice:
           "Names in this narration: the voice guessed 1 name (Drizzt), and 1 name was heard more than one way (Do'Urden). Open the check to see every mention.",
+        listened: true,
       }),
     }),
   );
@@ -132,7 +143,7 @@ it("says what the voice guessed and what it was heard saying more than one way",
   expect(screen.getByRole("cell", { name: "48 as a possessive" })).not.toBeNull();
   // The spread is what the table shows, and the name heard the same way is not in it.
   expect(screen.getByRole("cell", { name: "33% to 69%" })).not.toBeNull();
-  expect(screen.getByRole("cell", { name: "More than one way" })).not.toBeNull();
+  expect(screen.getByRole("cell", { name: "As written" })).not.toBeNull();
   expect(screen.queryByRole("cell", { name: "Gygax" })).toBeNull();
 });
 
@@ -140,8 +151,76 @@ it("says nothing after a render whose names all came out right", async () => {
   renderRouted(
     <NamesNarratedNotice projectId="p1" />,
     testDeps({
-      [heard]: jsonAnswer({ revisionId: "r1", narrated: null, heard: null, notice: null }),
+      [heard]: jsonAnswer({
+        revisionId: "r1",
+        narrated: null,
+        heard: null,
+        listened: false,
+        notice: null,
+      }),
     }),
   );
   await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+});
+
+it("names what came out as another sound, and offers the one place that settles it", async () => {
+  const lolth = {
+    name: "Lolth",
+    mentions: 28,
+    mean: 0.91,
+    low: 0.86,
+    high: 0.95,
+    spread: 0.09,
+    uneven: false,
+    saidAs: [{ letters: "LOTH", mentions: 25 }],
+    ipa: ["lɒlθ"],
+    different: true,
+  };
+  renderRouted(
+    <NamesNarratedNotice projectId="p1" />,
+    testDeps({
+      [heard]: jsonAnswer({
+        revisionId: "r1",
+        narrated: { names: [], mentions: 0, proper: 0 },
+        heard: { names: [lolth], uneven: [], different: [lolth], words: 21548, confidence: 0.94 },
+        listened: true,
+        notice:
+          "Names in this narration: 1 name came out as another sound (Lolth as \u201cloth\u201d). Open the check to see every mention.",
+      }),
+    }),
+  );
+  await waitFor(() => expect(screen.getByText(/1 name came out as another sound/)).not.toBeNull());
+  expect(screen.getByText("Names that came out as another sound")).not.toBeNull();
+  // The letters, and how many of its mentions came out that way.
+  expect(screen.getByRole("cell", { name: "\u201cloth\u201d \u00b7 25 of 28" })).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Name pronunciations" })).not.toBeNull();
+});
+
+it("says plainly when the captions are too old to have been listened to", async () => {
+  const row = {
+    name: "Do'Urden",
+    mentions: 26,
+    mean: 0.53,
+    low: 0.33,
+    high: 0.69,
+    spread: 0.36,
+    uneven: true,
+    saidAs: [],
+    ipa: [],
+    different: false,
+  };
+  renderRouted(
+    <NamesNarratedNotice projectId="p1" />,
+    testDeps({
+      [heard]: jsonAnswer({
+        revisionId: "r1",
+        narrated: null,
+        heard: { names: [row], uneven: [row], different: [], words: 21548, confidence: 0.94 },
+        listened: false,
+        notice:
+          "Names in this narration: 1 name was heard more than one way (Do'Urden). Open the check to see every mention.",
+      }),
+    }),
+  );
+  await waitFor(() => expect(screen.getByText(/timed before Slopify kept/)).not.toBeNull());
 });

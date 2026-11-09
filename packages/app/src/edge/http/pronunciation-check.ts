@@ -48,6 +48,10 @@ export interface PronunciationHeard {
   readonly revisionId: string | null;
   readonly narrated: UnguidedNames | null;
   readonly heard: HeardNames | null;
+  // Whether the caption timing records what the model heard, word by word. False for a video
+  // whose captions were timed before Slopify kept that: there, a name with nothing against it
+  // was never listened to, and the page says so rather than calling it right.
+  readonly listened: boolean;
   readonly notice: string | null;
 }
 
@@ -95,13 +99,21 @@ function timingWords(
   deps: Pick<AppDeps, "paths">,
   projectId: string,
   view: RevisionView,
-): readonly { readonly text: string; readonly confidence?: number | undefined }[] | null {
+): {
+  readonly words: readonly {
+    readonly text: string;
+    readonly confidence?: number | undefined;
+    readonly heard?: string | undefined;
+  }[];
+  readonly listened: boolean;
+} | null {
   const timing = readyOutput(view, { workKey: "subtitles:timing", role: "subtitle_words" });
   if (timing === undefined) return null;
   try {
-    return wordsSchema.parse(
+    const parsed = wordsSchema.parse(
       JSON.parse(readFileSync(outputPath(deps.paths, projectId, timing.output.path), "utf8")),
-    ).words;
+    );
+    return { words: parsed.words, listened: parsed.listened };
   } catch {
     // Timing that is missing or unreadable means there is nothing to say about how it was heard.
     return null;
@@ -178,19 +190,23 @@ export function pronunciationCheckRoutes(
               revisionId: null,
               narrated: null,
               heard: null,
+              listened: false,
               notice: null,
             } satisfies PronunciationHeard);
           const sources = sourcesOf(view.revision.config, view);
           const script = narrationText(deps, projectId, view, "tts_script");
           const written = narrationText(deps, projectId, view, "narration_txt");
-          const words = timingWords(deps, projectId, view);
+          const timing = timingWords(deps, projectId, view);
           const narrated = script === null ? null : namesNarrated(script, sources);
           const heard =
-            words === null ? null : heardNames(words, sources, written ?? script ?? undefined);
+            timing === null
+              ? null
+              : heardNames(timing.words, sources, written ?? script ?? undefined);
           return c.json({
             revisionId: view.revision.id,
             narrated,
             heard,
+            listened: timing?.listened ?? false,
             notice: narratedNotice(narrated, heard),
           } satisfies PronunciationHeard);
         },

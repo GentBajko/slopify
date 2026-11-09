@@ -38,6 +38,7 @@ export const workerMessage = z.discriminatedUnion("type", [
         start: z.number().finite().nonnegative(),
         end: z.number().finite().nonnegative(),
         confidence: z.number().finite().min(0).max(1).optional(),
+        heard: z.string().max(200).optional(),
       }),
     ),
   }),

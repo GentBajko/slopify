@@ -12,6 +12,8 @@ If narration omits a short phrase, alignment can skip that transcript span when 
 
 Audio Off disables subtitles. Video Off produces WAV audio with separate subtitle files. Uploaded audio must match the article; substantial mismatches fail with a message to correct the transcript. Review timing and spelling before publishing. English, Spanish, German, French, Italian, Portuguese, Dutch, Catalan, Polish and Czech are timed word by word (the other nine with a separate 248 MB multilingual model, downloaded on first use into `<data-dir>/models/multilingual-subtitles/`, about 1.1 GB of memory while aligning); other project languages are timed sentence by sentence. See docs/multilingual-timing.md. Unusual pronunciations and passages in another language than the project's can fail alignment.
 
+Timing also records, word by word, the letters the model heard where they are not the word it was given to place. Nothing extra is computed for it and nothing changes about the captions: it is the decode the aligner already runs to check the audio against the transcript, kept per word instead of discarded. It is what lets the project page answer whether a name was said right rather than merely said clearly, and it is why `subtitles.json` carries a `heard` field on some words and `listened: true` at the top. Captions timed by an earlier version have neither, and the name check reports those as unlistened rather than right.
+
 Fonts are copied into the completed project's caption assets, so an existing export can reuse its chosen font even after the original system font is removed. Installed fonts and uploaded fonts stay local. SRT/VTT are portable text/timing files and do not embed a font; the chosen font is used in burned video captions.
 
 ## Local model and licenses

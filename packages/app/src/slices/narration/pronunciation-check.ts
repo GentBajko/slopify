@@ -63,11 +63,34 @@ export interface HeardName {
   readonly high: number;
   readonly spread: number;
   readonly uneven: boolean;
+  // What the timing model heard where that was not this name, most mentions first. This is the
+  // one part of the timing that says how the name was said rather than how clearly: forced
+  // alignment places the word it is given whatever it hears, so a name said wrong the same way
+  // every time scores as well as one said right (`adapters/alignment/window.ts#heardAs`).
+  // Empty where every mention came out as written — and empty for captions timed before
+  // Slopify kept this, which is why the answer carries `listened`.
+  readonly saidAs: readonly SaidAs[];
+  // The pronunciation the sources give this name, so what came out can be read against what
+  // was asked for rather than against the spelling. Empty when the name reached the voice as
+  // part of a longer term, or with nothing at all.
+  readonly ipa: readonly string[];
+  // Most of its mentions came out as a sound the name does not spell: the voice has its own
+  // pronunciation of this name and keeps to it. Nothing else in the check can see this, because
+  // every mention scores well and scores the same. Spelling that is only spelling is folded
+  // away first (`soundKey`), so Bel heard as “bell” is not this and Lolth heard as “loth” is.
+  readonly different: boolean;
+}
+
+export interface SaidAs {
+  readonly letters: string;
+  readonly mentions: number;
 }
 
 export interface HeardNames {
   readonly names: readonly HeardName[];
   readonly uneven: readonly HeardName[];
+  // Names most of whose mentions came out as another sound, the most consistent first.
+  readonly different: readonly HeardName[];
   // Every word the timing has, and their mean confidence: the baseline a name is read against.
   readonly words: number;
   readonly confidence: number;
@@ -79,6 +102,49 @@ export interface HeardNames {
 // flags. Eight mentions is the fewest from which the 10th and 90th percentiles mean anything.
 export const heardMinMentions = 8;
 export const heardSpreadFlag = 0.3;
+
+// A name counts as said differently when most of its mentions came out as the same other sound.
+// Three mentions is the fewest where "every time" means anything, and six in ten keeps a name
+// the voice says both ways out of it: that one belongs under `uneven`, which is about mentions
+// disagreeing with each other.
+export const differentMinMentions = 3;
+export const differentShare = 0.6;
+
+// Pairs of letters that spell one sound, folded so that a spelling and a sound are comparable.
+// The timing model writes down what it hears, letter by letter, with no idea how the name is
+// spelled: it writes CREEG for Kreeg, BELL for Bel, TIER for Tyr and DRIST for Drizzt, all of
+// which are the name said correctly. Only the pairs that are the same sound in English however
+// they are written are here — EA is not (heart, beat), nor CH (chair, loch) — so a fold that
+// cancels is good evidence and one that does not is still only evidence.
+const sameSound: readonly (readonly [string, string])[] = [
+  ["PH", "F"],
+  ["CK", "K"],
+  ["QU", "KW"],
+  ["X", "KS"],
+  ["EE", "I"],
+  ["OO", "U"],
+  ["OU", "U"],
+  ["AI", "A"],
+  ["AY", "A"],
+  ["IE", "I"],
+  ["OA", "O"],
+  ["AU", "O"],
+  ["AW", "O"],
+  ["C", "K"],
+  ["Z", "S"],
+  ["Y", "I"],
+];
+
+// One name or one hearing of it, reduced to roughly the sounds in it: everything that is only
+// spelling is dropped, so two spellings of the same sound meet here and two sounds do not.
+export function soundKey(text: string): string {
+  let key = text.toUpperCase().replace(/[^\p{Lu}]+/gu, "");
+  for (const [pair, sound] of sameSound) key = key.replaceAll(pair, sound);
+  return key
+    .replace(/(.)\1+/gu, "$1")
+    .replace(/E$/u, "")
+    .replace(/E?S$/u, "");
+}
 
 // The entries narration pronounces with, assembled the way `recipe-text.ts` assembles them.
 // Parsed twice: once under the rules the project narrates with, which is what actually guides
@@ -231,6 +297,9 @@ export function namesNarrated(script: string, sources: PronunciationSources): Un
 export interface TimedWord {
   readonly text: string;
   readonly confidence?: number | undefined;
+  // What the timing model heard here, where that was not this word: the part of the timing that
+  // says how a name was said (`kernel/ports/subtitles.ts`, `adapters/alignment/window.ts`).
+  readonly heard?: string | undefined;
 }
 
 // A word as the aligner read it: "Do'Urden," is the name, "Drizzt's" is the name too.
@@ -260,29 +329,69 @@ export function heardNames(
   const { listed } = pronunciationEntries(sources);
   const heardText = corpus ?? words.map((word) => word.text).join(" ");
   const lowercased = lowercaseWords(heardText);
-  const wanted = new Map<string, string>();
+  const wanted = new Map<string, { readonly name: string; readonly ipa: readonly string[] }>();
   // A word of the timing is one word, so a term of several reaches it a part at a time, and a
   // hyphenated name may arrive whole or in parts. A part that is an ordinary word of this text
   // ("Hall" of "Mithral Hall", in a video that also says "hall") is left out, as it is above.
+  // A term stands as it is written, in lower case too ("tiefling"), but a part of a longer
+  // term has to look like a name on its own: the "and" of a term that has one is a word.
   for (const entry of nameCandidates(listed, heardText))
-    for (const part of [entry.term, ...entry.term.split(/[\s‐‑-]+/u)])
-      if (part.length >= 3 && !wanted.has(part.toLowerCase()) && !ordinaryWord(part, lowercased))
-        wanted.set(part.toLowerCase(), part);
+    for (const [at, part] of [entry.term, ...entry.term.split(/[\s‐‑-]+/u)].entries())
+      if (
+        part.length >= 3 &&
+        (at === 0 || /^\p{Lu}/u.test(part)) &&
+        !wanted.has(part.toLowerCase()) &&
+        !ordinaryWord(part, lowercased)
+      )
+        // The IPA belongs to the whole term, so only the term itself carries it: a part said
+        // alone is exactly the mention nothing pronounced.
+        wanted.set(part.toLowerCase(), { name: part, ipa: part === entry.term ? entry.ipa : [] });
   const scored = words.flatMap((word) =>
     typeof word.confidence === "number" ? [word.confidence] : [],
   );
-  const by = new Map<string, number[]>();
+  const by = new Map<
+    string,
+    {
+      readonly ipa: readonly string[];
+      readonly scores: number[];
+      readonly said: Map<string, number>;
+    }
+  >();
   for (const word of words) {
     if (typeof word.confidence !== "number") continue;
-    const name = wanted.get(spokenName(word.text).toLowerCase());
-    if (name === undefined) continue;
-    by.set(name, [...(by.get(name) ?? []), word.confidence]);
+    const found = wanted.get(spokenName(word.text).toLowerCase());
+    if (found === undefined) continue;
+    const row = by.get(found.name) ?? {
+      ipa: found.ipa,
+      scores: [] as number[],
+      said: new Map<string, number>(),
+    };
+    row.scores.push(word.confidence);
+    // Letters only, so one mention's punctuation never splits a spelling in two.
+    const letters = word.heard?.toUpperCase().replace(/[^\p{L}' ]+/gu, "");
+    if (letters !== undefined && letters !== "")
+      row.said.set(letters, (row.said.get(letters) ?? 0) + 1);
+    by.set(found.name, row);
   }
   const names = [...by.entries()]
-    .map(([name, values]) => {
-      const sorted = [...values].sort((a, b) => a - b);
+    .map(([name, row]) => {
+      const sorted = [...row.scores].sort((a, b) => a - b);
       const low = percentile(sorted, 0.1);
       const high = percentile(sorted, 0.9);
+      // Only the hearings that are another sound: a decode that spells the name differently
+      // (CREEG for Kreeg) is the name, and saying so would be noise, not a finding.
+      const saidAs = [...row.said.entries()]
+        .filter(([letters]) => soundKey(letters) !== soundKey(name))
+        .map(([letters, mentions]) => ({ letters, mentions }))
+        .sort((a, b) => b.mentions - a.mentions || a.letters.localeCompare(b.letters, "en"));
+      // The mentions that came out as one sound, whichever ways they were spelled, against the
+      // name's own: CREEG and KREEG are one hearing of Kreeg, and that hearing is the name.
+      const key = soundKey(name);
+      const sounds = new Map<string, number>();
+      for (const [letters, mentions] of row.said)
+        if (soundKey(letters) !== key)
+          sounds.set(soundKey(letters), (sounds.get(soundKey(letters)) ?? 0) + mentions);
+      const elsewhere = [...sounds.values()].sort((a, b) => b - a)[0] ?? 0;
       return {
         name,
         mentions: sorted.length,
@@ -291,12 +400,25 @@ export function heardNames(
         high,
         spread: high - low,
         uneven: sorted.length >= heardMinMentions && high - low >= heardSpreadFlag,
+        saidAs,
+        ipa: row.ipa,
+        different:
+          sorted.length >= differentMinMentions && elsewhere >= sorted.length * differentShare,
       };
     })
     .sort((a, b) => b.spread - a.spread || a.name.localeCompare(b.name, "en"));
   return {
     names,
     uneven: names.filter((row) => row.uneven),
+    // A name the voice renamed outright is worse than one it said two ways, so the worst share
+    // of mentions leads.
+    different: names
+      .filter((row) => row.different)
+      .toSorted(
+        (a, b) =>
+          (b.saidAs[0]?.mentions ?? 0) / b.mentions - (a.saidAs[0]?.mentions ?? 0) / a.mentions ||
+          b.mentions - a.mentions,
+      ),
     words: scored.length,
     confidence:
       scored.length === 0 ? 0 : scored.reduce((sum, value) => sum + value, 0) / scored.length,
@@ -330,9 +452,19 @@ export function narratedNotice(
   heard: HeardNames | null,
 ): string | null {
   const guessed = narrated?.names.filter((row) => row.proper) ?? [];
-  const uneven = heard?.uneven ?? [];
-  if (guessed.length === 0 && uneven.length === 0) return null;
+  const uneven = heard?.uneven.filter((row) => !row.different) ?? [];
+  const different = heard?.different ?? [];
+  if (guessed.length === 0 && uneven.length === 0 && different.length === 0) return null;
   const parts: string[] = [];
+  // First, because it is the only finding that says the video is wrong rather than unguided.
+  if (different.length > 0)
+    parts.push(
+      `${different.length === 1 ? "1 name came" : `${String(different.length)} names came`} out ` +
+        `as another sound (${different
+          .slice(0, 4)
+          .map((row) => `${row.name} as “${(row.saidAs[0]?.letters ?? "").toLowerCase()}”`)
+          .join(", ")}${different.length > 4 ? ` and ${String(different.length - 4)} more` : ""})`,
+    );
   if (guessed.length > 0)
     parts.push(
       `the voice guessed ${guessed.length === 1 ? "1 name" : `${String(guessed.length)} names`} ` +
@@ -343,5 +475,9 @@ export function narratedNotice(
       `${uneven.length === 1 ? "1 name was" : `${String(uneven.length)} names were`} heard more ` +
         `than one way (${list(uneven)})`,
     );
-  return `Names in this narration: ${parts.join(", and ")}. Open the check to see every mention.`;
+  const sentence =
+    parts.length === 1
+      ? (parts[0] ?? "")
+      : `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1) ?? ""}`;
+  return `Names in this narration: ${sentence}. Open the check to see every mention.`;
 }

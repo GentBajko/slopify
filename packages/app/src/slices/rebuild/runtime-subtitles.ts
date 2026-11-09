@@ -54,6 +54,9 @@ export const wordsSchema = z.object({
       start: z.number().finite().nonnegative(),
       end: z.number().finite().positive(),
       confidence: z.number().optional(),
+      // What the timing model heard here, when that is not this word (`window.ts#heardAs`).
+      // Older timing files have it nowhere; a word said as written has it either way.
+      heard: z.string().optional(),
       // A multi-voice run's speaker id and script turn (`voices/timing.ts`).
       speaker: z.string().optional(),
       turn: z.number().int().positive().optional(),
@@ -62,6 +65,10 @@ export const wordsSchema = z.object({
   omissions: z
     .array(z.object({ start: z.number().finite().nonnegative(), text: z.string() }))
     .default([]),
+  // Whether this timing was written by a build that records what the model heard. Without it,
+  // a name with nothing against it was never listened to, which is not the same as a name that
+  // came out right, and the name check says so instead of guessing.
+  listened: z.boolean().default(false),
 });
 const cuesSchema = z.object({
   cues: z.array(
@@ -182,7 +189,12 @@ async function timing(
     piece,
     "subtitle_words",
     "subtitles.json",
-    JSON.stringify({ key: piece.logicalFingerprint ?? piece.fingerprint, words, omissions }),
+    JSON.stringify({
+      key: piece.logicalFingerprint ?? piece.fingerprint,
+      words,
+      omissions,
+      listened: true,
+    }),
   );
   await publishResult(deps, context, piece, [output], { words, omissions }, output.asset);
   return "done";

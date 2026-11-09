@@ -196,3 +196,47 @@ describe("words a voice says its own way", () => {
     ).toBeUndefined();
   });
 });
+
+describe("what the model heard, word by word", () => {
+  const written = "The queen Lolth rules everything here";
+  it("keeps the letters a word was heard as when they are not the word", () => {
+    const said = recording("THE QUEEN LOTH RULES EVERYTHING HERE");
+    const { words } = alignSpeechWindow(
+      said.logits,
+      said.frames,
+      speechWords(written),
+      true,
+      12,
+      0,
+    );
+    expect(words.map((word) => word.text).join(" ")).toBe(written);
+    expect(words.find((word) => word.text === "Lolth")?.heard).toBe("LOTH");
+    // Every other word was said as written, so it carries nothing: the timing file only grows
+    // where something is worth reading.
+    expect(words.filter((word) => word.heard !== undefined)).toHaveLength(1);
+  });
+  it("says nothing about a word said as written, however it scored", () => {
+    const said = recording("THE QUEEN LOLTH RULES EVERYTHING HERE");
+    const { words } = alignSpeechWindow(
+      said.logits,
+      said.frames,
+      speechWords(written),
+      true,
+      12,
+      0,
+    );
+    expect(words.every((word) => word.heard === undefined)).toBe(true);
+  });
+  it("leaves words too short to tell apart alone", () => {
+    const said = recording("AN OWL FLEW OVER THE WIDE GREEN FIELDS");
+    const { words } = alignSpeechWindow(
+      said.logits,
+      said.frames,
+      speechWords("In owl flew over the wide green fields"),
+      true,
+      12,
+      0,
+    );
+    expect(words.find((word) => word.text === "In")?.heard).toBeUndefined();
+  });
+});

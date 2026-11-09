@@ -51,26 +51,40 @@ function UnguidedTable({
   );
 }
 
-function HeardTable({ names }: { readonly names: readonly HeardName[] }): ReactElement {
+// What came out, for one name: the spelling most of its mentions were heard as, and how many.
+function cameOut(row: HeardName): string {
+  const worst = row.saidAs[0];
+  if (worst === undefined) return "As written";
+  return `“${worst.letters.toLowerCase()}” · ${String(worst.mentions)} of ${String(row.mentions)}`;
+}
+
+function HeardTable({
+  names,
+  caption,
+}: {
+  readonly names: readonly HeardName[];
+  readonly caption: string;
+}): ReactElement {
   const percent = (value: number): string => `${String(Math.round(value * 100))}%`;
   return (
     <DataTable
-      caption="How the finished narration was heard saying each name"
+      caption={caption}
       rows={names}
       rowKey={(row) => row.name}
       columns={[
         { id: "name", header: "Name", cell: (row) => row.name },
         { id: "mentions", header: "Said", cell: (row) => row.mentions, numeric: true },
+        { id: "came", header: "Came out as", cell: (row) => cameOut(row) },
+        {
+          id: "ipa",
+          header: "You asked for",
+          cell: (row) => (row.ipa.length === 0 ? "Nothing" : row.ipa.join(" · ")),
+        },
         { id: "mean", header: "Heard", cell: (row) => percent(row.mean), numeric: true },
         {
           id: "spread",
           header: "Spread",
           cell: (row) => `${percent(row.low)} to ${percent(row.high)}`,
-        },
-        {
-          id: "verdict",
-          header: "Verdict",
-          cell: (row) => (row.uneven ? "More than one way" : "The same way"),
         },
       ]}
     />
@@ -117,9 +131,31 @@ export function NamesNarratedNotice({
   const { data } = useQuery(pronunciationsHeardQuery(api, projectId));
   if (data?.notice === undefined || data.notice === null) return null;
   const guessed = (data.narrated?.names ?? []).filter((row) => row.proper);
-  const uneven = data.heard?.uneven ?? [];
+  const different = data.heard?.different ?? [];
+  const uneven = (data.heard?.uneven ?? []).filter((row) => !row.different);
   return (
     <Callout title={data.notice}>
+      {different.length === 0 ? null : (
+        <Fold
+          summary="Names that came out as another sound"
+          state={`${String(different.length)} ${different.length === 1 ? "name" : "names"}`}
+          remember="project.names-different"
+        >
+          <HeardTable
+            names={different}
+            caption="Names the voice said its own way, mention by mention"
+          />
+          <p className="m-0 mt-2">
+            The letters are what the timing model heard over each mention, which is the one part of
+            the check that says how a name was said rather than how clearly. Spelling that is only
+            spelling is folded away first, so a name heard as another spelling of itself — “creeg”
+            for Kreeg, “bell” for Bel — is not here. Read the letters against what you asked for:
+            they come from a second model listening, not from a verdict. If what came out is wrong,
+            change that name's IPA in{" "}
+            <TextLink to="/name-pronunciations">Name pronunciations</TextLink> and narrate again.
+          </p>
+        </Fold>
+      )}
       {guessed.length === 0 ? null : (
         <Fold
           summary="Names the voice guessed"
@@ -143,13 +179,24 @@ export function NamesNarratedNotice({
           state={`${String(uneven.length)} ${uneven.length === 1 ? "name" : "names"}`}
           remember="project.names-uneven"
         >
-          <HeardTable names={uneven} />
+          <HeardTable
+            names={uneven}
+            caption="How the finished narration was heard saying each name"
+          />
           <p className="m-0 mt-2">
             Read from the word timing the captions were made with — nothing is listened to again.
             The spread is what matters: a rare name is heard poorly even when it is said perfectly,
             so these are the names whose own mentions disagree with each other.
           </p>
         </Fold>
+      )}
+      {data.listened || data.heard === null ? null : (
+        <p className="m-0">
+          This video's captions were timed before Slopify kept what the voice was heard saying, so
+          the names above are read from their scores alone. A name said wrong the same way every
+          time scores well, and would not show here. Make the captions again to have it listened to:
+          it costs nothing but time.
+        </p>
       )}
     </Callout>
   );

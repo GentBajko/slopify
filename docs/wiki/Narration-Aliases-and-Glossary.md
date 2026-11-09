@@ -181,6 +181,14 @@ The **YouTube** section carries the same line, saying two things.
 
 The spread is the signal, not a low score. A rare name is heard poorly even when it is said perfectly, so only a name whose own mentions disagree with each other is flagged: eight mentions or more, and a spread of 0.30 or more between its 10th and 90th percentile.
 
+**What came out.** The timing model writes down the letters it heard over a word whenever they are not the word itself, so **Came out as** shows how a name was actually said, next to how many of its mentions came out that way — `“eltarel” · 21 of 21` — and **You asked for** shows the IPA your glossary gave it. This is the one part of the check that can catch a name said wrong the *same* way every time: that name scores high and scores evenly, so nothing above it would ever flag.
+
+Spelling is folded away before anything is compared, because the model writes what it hears and has no idea how the name is spelled. It writes “creeg” for Kreeg, “bell” for Bel, “tier” for Tyr and “drist” for Drizzt — all of them the name said correctly — and none of those is reported. What is reported is a sound the name does not spell, in most of its mentions: six in ten or more, over at least three.
+
+Read the letters rather than trust them: they come from a second model listening, not from a verdict, and a word that is spelled unlike how it sounds can still be named although it was said right. If what came out is wrong, change the name's IPA in **Name pronunciations** and narrate again; if it sounds right to you, nothing needs doing.
+
+If the captions were timed before Slopify started keeping this, the check says so instead of calling the names right. Making the captions again fills it in and costs nothing but time.
+
 A name read as an ordinary English word is left out of both checks: a one-word name that the same text also writes in lower case is a word here and not a name, which is why "Hall" stays quiet in a video that also says "hall".
 
 ## Which one do I use?

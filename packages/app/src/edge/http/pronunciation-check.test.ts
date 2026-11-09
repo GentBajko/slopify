@@ -84,6 +84,8 @@ describe("GET /api/projects/:projectId/pronunciations/heard", () => {
     const body = (await response.json()) as PronunciationHeard;
     expect(body.revisionId).not.toBeNull();
     expect(body.notice).toBeNull();
+    // No timing yet, so nothing has been listened to: the page must not read that as "right".
+    expect(body.listened).toBe(false);
   });
 
   it("says a project it cannot find", async () => {

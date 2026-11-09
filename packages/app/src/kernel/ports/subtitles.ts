@@ -17,6 +17,11 @@ export interface TimedWord {
   readonly start: number;
   readonly end: number;
   readonly confidence?: number | undefined;
+  // The letters the timing model heard over this word's own frames, present only where they
+  // disagree with the word itself: how the voice actually said it, as opposed to how clearly.
+  // Forced alignment places the word it is given whatever it hears, so this is the only part of
+  // the timing that can tell a name said wrong from a name said right.
+  readonly heard?: string | undefined;
 }
 export interface AlignmentRequest {
   readonly audioPath: string;

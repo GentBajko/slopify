@@ -7,6 +7,7 @@ import {
   namesNarrated,
   narratedNotice,
   type PronunciationSources,
+  soundKey,
 } from "./pronunciation-check.js";
 
 const glossary = `## Pronunciation Glossary
@@ -177,6 +178,91 @@ describe("how each name was heard", () => {
     );
     expect(heard.words).toBe(2);
     expect(heard.confidence).toBeCloseTo(0.7);
+  });
+
+  it("names what came out as another sound, however well it scored", () => {
+    // Every mention scores high and scores the same: confidence alone has nothing to say here.
+    const heard = heardNames(
+      Array.from({ length: 10 }, () => ({
+        text: "Catti-brie",
+        confidence: 0.95,
+        heard: "KATIBRA",
+      })),
+      sources(),
+      "Catti-brie",
+    );
+    const row = heard.names.find((one) => one.name === "Catti-brie");
+    expect(row?.uneven).toBe(false);
+    expect(row?.saidAs).toEqual([{ letters: "KATIBRA", mentions: 10 }]);
+    expect(heard.different.map((one) => one.name)).toEqual(["Catti-brie"]);
+    // The pronunciation that was asked for travels with it, so what came out can be read
+    // against it rather than against the spelling.
+    expect(row?.ipa).toEqual(["ˌkæti.ˈbriː"]);
+  });
+
+  it("says nothing when the letters are only another spelling of the same sound", () => {
+    // The model writes what it hears with no idea how the name is spelled: DRIST is Drizzt.
+    const heard = heardNames(
+      Array.from({ length: 10 }, () => ({ text: "Drizzt", confidence: 0.9, heard: "DRIST" })),
+      sources(),
+      "Drizzt",
+    );
+    expect(heard.names[0]?.saidAs).toEqual([]);
+    expect(heard.different).toEqual([]);
+  });
+
+  it("leaves a name alone when only a few mentions came out differently", () => {
+    const heard = heardNames(
+      [
+        ...Array.from({ length: 8 }, () => ({ text: "Belwar", confidence: 0.9 })),
+        { text: "Belwar", confidence: 0.9, heard: "BELLAVAR" },
+      ],
+      sources(),
+      "Belwar",
+    );
+    expect(heard.names[0]?.saidAs).toEqual([{ letters: "BELLAVAR", mentions: 1 }]);
+    expect(heard.different).toEqual([]);
+  });
+
+  it("says nothing about what came out when the timing never recorded it", () => {
+    const heard = heardNames(
+      Array.from({ length: 10 }, () => ({ text: "Drizzt", confidence: 0.9 })),
+      sources(),
+      "Drizzt",
+    );
+    expect(heard.names[0]?.saidAs).toEqual([]);
+    expect(heard.different).toEqual([]);
+  });
+
+  it("leads the line with a name that came out as another sound", () => {
+    const heard = heardNames(
+      Array.from({ length: 6 }, () => ({ text: "Belwar", confidence: 0.9, heard: "BELAVOR" })),
+      sources(),
+      "Belwar",
+    );
+    const notice = narratedNotice(namesNarrated("Catti-brie spoke.", sources()), heard);
+    expect(notice).toMatch(/^Names in this narration: 1 name came out as another sound/);
+    expect(notice).toContain("Belwar as “belavor”");
+  });
+
+  it("folds away spelling that is only spelling, and keeps a sound that is not", () => {
+    // Said right, spelled as it sounds.
+    const pairs = (rows: readonly (readonly [string, string])[]) => rows;
+    for (const [name, heard] of pairs([
+      ["Kreeg", "CREEG"],
+      ["Bel", "BELL"],
+      ["Tyr", "TIER"],
+      ["Wyll", "WILL"],
+      ["Phandelver", "FANDELVER"],
+    ]))
+      expect(soundKey(name)).toBe(soundKey(heard));
+    // Said as another sound.
+    for (const [name, heard] of pairs([
+      ["Lolth", "LOTH"],
+      ["Elturel", "ELTAREL"],
+      ["Torm", "TORUM"],
+    ]))
+      expect(soundKey(name)).not.toBe(soundKey(heard));
   });
 
   it("says one line about both halves, or nothing at all", () => {

@@ -186,9 +186,9 @@ export function saidTheirWay(
     start = end;
   }
   if (keep < holdingWords) return undefined;
-  return words
-    .slice(0, keep)
-    .map((word, index) => (matches[index] ? word : { ...word, confidence: 0 }));
+  return withHeard(logits, frames, words.slice(0, keep), candidate, spec).map((word, index) =>
+    matches[index] ? word : { ...word, confidence: 0 },
+  );
 }
 
 function accepted(
@@ -217,7 +217,7 @@ function accepted(
     )
   )
     throw new Error(spec.mismatch);
-  return words;
+  return withHeard(logits, frames, words, candidate, spec);
 }
 
 export function greedy(
@@ -229,7 +229,7 @@ export function greedy(
 }
 
 // What the model heard between two frames.
-function greedyBetween(
+export function greedyBetween(
   logits: Float32Array,
   from: number,
   to: number,
@@ -249,4 +249,47 @@ function greedyBetween(
     previous = best;
   }
   return text.trim().replace(/\s+/g, " ");
+}
+
+// What the model heard over one word's own frames, when that is not the word it was given to
+// place. Forced alignment is only ever asked where a word is, never which word it was, so a
+// name said wrong the same way every time scores as well as one said right; these letters are
+// the one place the difference shows. Kept only on a word that disagrees, so the timing file
+// stays a timing file: a word the model heard as written carries nothing.
+export function heardAs(
+  logits: Float32Array,
+  frames: number,
+  word: TimedWord,
+  expected: string,
+  spec: AlignmentSpec,
+): string | undefined {
+  // Too short to tell apart: "the" heard as "th" says nothing about anything.
+  if (spec.lettersOnly(expected).length < 3) return undefined;
+  const heard = greedyBetween(
+    logits,
+    Math.floor(word.start / frameSeconds),
+    Math.min(frames, Math.ceil(word.end / frameSeconds)),
+    spec,
+  );
+  // Anything that is not the word itself, not only what is far from it: "Loth" for "Lolth" is
+  // one letter out and is exactly the mistake worth catching. Whether a difference means
+  // anything is for the reader to judge from how often it repeats, not for one word to decide,
+  // so this records and the name check counts (`slices/narration/pronunciation-check.ts`).
+  const letters = spec.comparable(heard);
+  if (letters === "" || letters === spec.comparable(expected)) return undefined;
+  return heard.slice(0, 60);
+}
+
+// Every word of an accepted window, carrying what the model heard wherever that disagrees.
+export function withHeard(
+  logits: Float32Array,
+  frames: number,
+  words: readonly TimedWord[],
+  candidate: readonly SpeechWord[],
+  spec: AlignmentSpec,
+): readonly TimedWord[] {
+  return words.map((word, index) => {
+    const heard = heardAs(logits, frames, word, candidate[index]?.spoken ?? "", spec);
+    return heard === undefined ? word : { ...word, heard };
+  });
 }
