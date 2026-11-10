@@ -231,11 +231,15 @@ it("cuts on sentences, crossfades, draws chapter cards and animates every other 
   expect(cuts.every((cut) => Math.abs((cut % 1) - 0.95) < 0.04)).toBe(true);
   expect(shots.reduce((sum, shot) => sum + shot.frames, 0)).toBe(780);
   expect(shots.slice(1).every((shot) => shot.transition?.kind === "crossfade")).toBe(true);
-  // Images take turns; the animated one comes as its clip, the refused one as its still.
-  const kinds = shots.map((shot) => shot.source.kind).slice(0, 3);
-  expect(kinds[kept - 1]).toBe("video");
-  expect(kinds[refused - 1]).toBe("image");
-  expect(kinds[1]).toBe("image");
+  // The images run in order and none comes round twice, so the sources in order are the images
+  // in order: the animated one as its clip, the refused one as its still. An image whose share
+  // of the narration spans two slots shows in both, so the run of slots is read as one image.
+  const sources = shots
+    .map((shot) => shot.source)
+    .filter((source, at, all) => at === 0 || source.path !== all[at - 1]?.path);
+  expect(sources.map((source) => source.kind).slice(0, 3)).toEqual(
+    kept === 1 ? ["video", "image", "image"] : ["image", "image", "video"],
+  );
   expect(record.editList.look).toEqual({
     vignette: "subtle",
     grain: "off",

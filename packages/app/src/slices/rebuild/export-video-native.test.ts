@@ -291,15 +291,16 @@ it("zooms the first image in and the second one out, each within its own slot", 
       .outputs.find((row) => row.selected && row.output.role === "video");
     if (video === undefined) throw new Error("No video");
     const path = outputPath(h.deps.paths, h.projectId, video.output.path);
-    // One-second slots: each zooms its whole range inside its own slot. A 200 px bar on a
-    // 640 px still is 600 px in a 1920 px frame at zoom 1, a 160 px bar 480 px. The ends are
-    // read just before the slot's last frame.
+    // Two images over four seconds of narration: a slot each, two seconds long, and each
+    // zooms its whole range inside its own slot. A 200 px bar on a 640 px still is 600 px in a
+    // 1920 px frame at zoom 1, a 160 px bar 480 px. The ends are read just before the slot's
+    // last frame.
     const firstStart = barWidthAt(path, 0);
-    const firstEnd = barWidthAt(path, 0.95);
+    const firstEnd = barWidthAt(path, 1.95);
     expect(firstStart).toBeCloseTo(600, -1);
     expect(firstEnd / firstStart).toBeCloseTo(1.225, 1);
-    const secondStart = barWidthAt(path, 1.0);
-    const secondEnd = barWidthAt(path, 1.95);
+    const secondStart = barWidthAt(path, 2.0);
+    const secondEnd = barWidthAt(path, 3.95);
     expect(secondStart / 480).toBeCloseTo(1.225, 1);
     expect(secondEnd).toBeCloseTo(480, -1);
   } finally {

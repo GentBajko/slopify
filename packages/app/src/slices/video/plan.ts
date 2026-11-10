@@ -167,19 +167,21 @@ export function planRender(input: PlanInput): RenderPlan {
   const totalFrames = Math.max(1, Math.round(totalSeconds * fps));
   const edit = input.edit;
   const narration = input.body === undefined ? undefined : edit?.narration;
+  const figures = figureFrames(edit?.figures ?? [], totalFrames);
+  const figureTotal = figures.reduce((sum, figure) => sum + figure.frames, 0);
+  const shotSeconds = holdSeconds(input, Math.max(0, totalFrames - figureTotal) / fps);
   const lengthsFor = (from: number, frameCount: number): readonly number[] =>
     narration === undefined
-      ? everyLengths(Math.max(1, Math.round(input.imageSeconds * fps)), frameCount)
+      ? everyLengths(Math.max(1, Math.round(shotSeconds * fps)), frameCount)
       : narrationShotFrames({
           totalFrames: frameCount,
           fps,
-          imageSeconds: input.imageSeconds,
+          imageSeconds: shotSeconds,
           cutPoints: narration.cutPoints.map((point) => point - from / fps),
           chapterStarts: narration.chapterStarts
             .map((start) => start - from / fps)
             .filter((start) => start >= 0 && start < frameCount / fps),
         });
-  const figures = figureFrames(edit?.figures ?? [], totalFrames);
   const planned =
     figures.length === 0
       ? shots(input, lengthsFor(0, totalFrames))
@@ -196,7 +198,7 @@ export function planRender(input: PlanInput): RenderPlan {
   return {
     gapSeconds: input.gapSeconds,
     edgeSeconds: input.edgeSeconds,
-    imageSeconds: input.imageSeconds,
+    imageSeconds: shotSeconds,
     zoomPercent: input.zoomPercent,
     motionStyle: input.motionStyle,
     editList: {
@@ -340,23 +342,61 @@ export function audioTimeline(
 
 // Every N seconds: each shot `each` frames until the timeline is full; the last shot is cut
 // to what is left. A timeline shorter than one shot is a single shot.
+// How long one image stays on screen. Each image is made for one moment of the narration, so
+// the shot length follows how many images there are rather than a fixed setting: Seconds per
+// image on its own decides the shot count and then replays the set to fill the timeline, which
+// at 240 images over two and a half hours played the whole set through two and a half times and
+// brought the opening illustrations back over the closing chapters. Seconds per image stays the
+// floor, so a project never cuts faster than it asked for, and `maxHoldSeconds` the ceiling, so
+// a handful of images over a long narration still cuts, and moves, rather than holding one
+// frame for a quarter of an hour. A silent video already shows every image once, and a short's
+// images are counted from Seconds per image to begin with (`shortImageCount`), so both come out
+// unchanged.
+const maxHoldSeconds = 120;
+
+function holdSeconds(
+  input: Pick<PlanInput, "body" | "images" | "imageSeconds">,
+  fillSeconds: number,
+): number {
+  // One image has no order to follow, so it keeps its own slots and the motion that alternates
+  // across them rather than becoming a single still held for the whole narration.
+  if (input.body === undefined || input.images.length < 2) return input.imageSeconds;
+  const share = fillSeconds / input.images.length;
+  if (!Number.isFinite(share) || share <= 0) return input.imageSeconds;
+  // Past this, one image would sit on screen for minutes on end. The shots stay at the pace the
+  // project asked for, so the motion keeps refreshing across a long hold (`motion.ts`); the
+  // images still go in order, one after another, and none of them comes round twice.
+  if (share > maxHoldSeconds) return input.imageSeconds;
+  return Math.max(input.imageSeconds, share);
+}
+
+// Which image a shot shows: the images in order, spread evenly over the shots. More shots than
+// images holds a few of them over two shots in a row rather than starting the set over, and
+// more images than shots leaves some out rather than dropping the whole tail of the set.
+function imageAt(at: number, total: number, images: number): number {
+  if (images <= 0 || total <= 0) return 0;
+  return Math.min(images - 1, Math.floor((at * images) / total));
+}
+
 function everyLengths(each: number, totalFrames: number): readonly number[] {
   const count = Math.ceil(totalFrames / each);
   return Array.from({ length: count }, (_value, at) => Math.min(each, totalFrames - each * at));
 }
 
-// The images take turns in slideshow order, one per shot, starting over after the last until
-// the timeline is full. The motion goes by the shot's place, not the image (`motion.ts`), so
-// an image that comes round again may move another way. A moving clip in an image's place
-// plays as it is, with no motion of its own.
+// The images in order, one per shot, spread over the whole timeline (`imageAt`). The motion
+// goes by the shot's place, not the image (`motion.ts`), so an image held over two shots may
+// move another way in the second. A moving clip in an image's place plays as it is, with no
+// motion of its own. `total` is every shot in the timeline, not just this stretch of it, so
+// the figures do not restart the set.
 function shots(
   input: Pick<PlanInput, "images" | "motionStyle" | "zoomPercent" | "edit">,
   lengths: readonly number[],
   first = 0,
+  total = lengths.length,
 ): readonly Shot[] {
   return lengths.map((frames, place) => {
     const at = first + place;
-    const index = at % input.images.length;
+    const index = imageAt(at, total, input.images.length);
     const clip = input.edit?.clips?.[index];
     return clip === undefined
       ? {
@@ -410,13 +450,25 @@ function aroundFigures(
   totalFrames: number,
   lengthsFor: (from: number, frames: number) => readonly number[],
 ): readonly Shot[] {
+  const lengthsAt = (from: number, to: number): readonly number[] =>
+    to > from ? lengthsFor(from, to - from) : [];
+  // Every stretch is measured before any image is placed, so the images spread over all of
+  // them together rather than starting the set over after each figure.
+  let total = 0;
+  let measured = 0;
+  for (const figure of figures) {
+    total += lengthsAt(measured, figure.startFrame).length;
+    measured = figure.startFrame + figure.frames;
+  }
+  total += lengthsAt(measured, totalFrames).length;
+
   const out: Shot[] = [];
   let cursor = 0;
   let slot = 0;
   const stretch = (to: number): void => {
     if (to <= cursor) return;
     const lengths = lengthsFor(cursor, to - cursor);
-    out.push(...shots(input, lengths, slot));
+    out.push(...shots(input, lengths, slot, total));
     slot += lengths.length;
     cursor = to;
   };

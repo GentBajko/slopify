@@ -91,13 +91,14 @@ describe("planRender with cards", () => {
     expect(before).toBe(90);
     expect(shots[at]?.frames).toBe(90);
     expect(shots[at]?.motion).toEqual({ kind: "still" });
-    // The images keep their turns across the card: one, two, card, three, one.
+    // The images run in order across the card, none of them coming round twice: the seven
+    // seconds the card leaves make four slots for three images, so the first spans two.
     expect(shots.map((shot) => shot.source.path)).toEqual([
       "one.png",
-      "two.png",
-      "card.png",
-      "three.png",
       "one.png",
+      "card.png",
+      "two.png",
+      "three.png",
     ]);
   });
 

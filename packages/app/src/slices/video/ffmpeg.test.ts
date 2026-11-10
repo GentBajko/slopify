@@ -53,32 +53,40 @@ describe("resolveFfmpeg", () => {
 
 describe("slideshowClips", () => {
   it("encodes each still, motion and length once and plays them in shot order", () => {
-    // 10 s at 3 s a slot over two images: a in, b out, a in, b out (1 s).
+    // Two images over four minutes at 3 s a slot: far too few to carry it a paragraph at a
+    // time, so each is held over many slots and the zoom alternates across them. Four
+    // still-and-motion pairs in all, replayed across eighty-one slots.
     const { clips, order } = slideshowClips(
-      plan({ imageSeconds: 3, images: ["/a.png", "/b.png"] }),
+      plan({
+        imageSeconds: 3,
+        images: ["/a.png", "/b.png"],
+        body: { path: "/b.mp3", seconds: 243 },
+      }),
     );
+    expect(order).toHaveLength(81);
+    expect(new Set(order).size).toBe(clips.length);
     expect(
       clips.map((clip) => [
-        clip.name,
         clip.shot.source.path,
         clip.shot.motion.kind === "zoom" ? clip.shot.motion.direction : "",
         clip.shot.frames,
       ]),
     ).toEqual([
-      ["c1.mp4", "/a.png", "in", 90],
-      ["c2.mp4", "/b.png", "out", 90],
-      ["c3.mp4", "/b.png", "out", 30],
+      ["/a.png", "in", 90],
+      ["/a.png", "out", 90],
+      ["/b.png", "out", 90],
+      ["/b.png", "in", 90],
     ]);
-    expect(order).toEqual(["c1.mp4", "c2.mp4", "c1.mp4", "c3.mp4"]);
   });
 
-  it("gives an image both zooms when an odd count makes it come back the other way", () => {
+  it("gives an image both zooms when it is held over more than one slot", () => {
     const { clips, order } = slideshowClips(
-      plan({ body: { path: "/b.mp3", seconds: 36 }, imageSeconds: 3 }),
+      plan({ body: { path: "/b.mp3", seconds: 363 }, imageSeconds: 3 }),
     );
-    // Three images, twelve slots: each image in and out once, so six clips.
+    // Three images over six minutes: each spans about forty slots, so each is encoded zooming
+    // in and zooming out, and nothing else.
     expect(clips).toHaveLength(6);
-    expect(order).toHaveLength(12);
+    expect(order).toHaveLength(121);
   });
 
   it("dedupes by the whole motion, so a pan and a zoom of one still are two clips", () => {
@@ -253,7 +261,11 @@ describe("clipArgs", () => {
           /^\((?:iw-iw|ih-ih)\/zoom\)\*\(([\d.]+)(?:([+-])([\d.]+)\*on\/\d+)?\)$/.exec(axis) ?? [];
         return [Number(start), Number(start) + (sign === "-" ? -1 : 1) * Number(by)];
       };
-      const shots = plan({ motionStyle: "pan", body: { path: "/b.mp3", seconds: 40 } }).shots;
+      const shots = plan({
+        motionStyle: "pan",
+        body: { path: "/b.mp3", seconds: 40 },
+        images: Array.from({ length: 8 }, (_image, at) => `/p/images/${String(at)}.png`),
+      }).shots;
       expect(shots).toHaveLength(8);
       for (const shot of shots) {
         const [, x = "", y = ""] = graph(shot) ?? [];
@@ -586,8 +598,9 @@ describe("a long slideshow", () => {
   it("keeps every command line short however many slots there are", () => {
     const { clips, order } = slideshowClips(long);
     expect(order.length).toBeGreaterThan(720);
-    // Sixty images, an even count: each always zooms the same way, plus the cut last slot.
-    expect(clips).toHaveLength(61);
+    // Sixty images over three hours is three minutes each, so the slots stay at 15 s and every
+    // image is encoded zooming both ways, plus the cut last slot.
+    expect(clips).toHaveLength(121);
     const lengths = [
       ...clips.map((clip) => clipArgs(long, clip.shot, "C:\\w\\c61.mp4").join(" ").length),
       joinArgs(long, "C:\\w\\video.mp4", "C:\\w\\slides.ffconcat", true).join(" ").length,

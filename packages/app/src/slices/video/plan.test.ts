@@ -170,21 +170,12 @@ describe("the image shots", () => {
     expect(plan.editList.shots.map((slot) => slot.frames)).toEqual([150, 150, 150]);
   });
 
-  it("cycles the images in order until the narration ends", () => {
-    // 100 s at 15 s a slot: six full slots and a 10 s seventh.
+  it("shows each image once, holding it for its share of the narration", () => {
+    // Five images over 100 s: 20 s each, not 15 s a slot with the set coming round again.
     const plan = planRender(input({ body: { path: "/b.mp3", seconds: 100 }, images: five }));
-    expect(plan.editList.shots.map((slot) => slot.source.path)).toEqual([
-      "/1.png",
-      "/2.png",
-      "/3.png",
-      "/4.png",
-      "/5.png",
-      "/1.png",
-      "/2.png",
-    ]);
-    expect(plan.editList.shots.map((slot) => slot.frames)).toEqual([
-      450, 450, 450, 450, 450, 450, 300,
-    ]);
+    expect(plan.editList.shots.map((slot) => slot.source.path)).toEqual(five);
+    expect(plan.editList.shots.map((slot) => slot.frames)).toEqual([600, 600, 600, 600, 600]);
+    expect(plan.imageSeconds).toBe(20);
     expect(plan.editList.shots.reduce((sum, slot) => sum + slot.frames, 0)).toBe(plan.totalFrames);
   });
 
@@ -217,16 +208,20 @@ describe("the image shots", () => {
     ]);
   });
 
-  it("alternates the zoom per slot, so a returning image may zoom the other way", () => {
+  it("keeps cutting through a long hold, so the motion refreshes and no image repeats", () => {
+    // Two images over an hour is half an hour each, far past a hold anyone reads as a picture
+    // changing. The slots stay at the project's own seconds so the motion keeps moving, the
+    // images still run in order, and neither of them comes round a second time.
     const plan = planRender(
-      input({ body: { path: "/b.mp3", seconds: 60 }, images: ["/a.png", "/b.png", "/c.png"] }),
+      input({ body: { path: "/b.mp3", seconds: 60 * 60 }, images: ["/a.png", "/b.png"] }),
     );
-    expect(plan.editList.shots.map((slot) => `${slot.source.path}:${moves(slot)}`)).toEqual([
-      "/a.png:in",
-      "/b.png:out",
-      "/c.png:in",
-      "/a.png:out",
-    ]);
+    expect(plan.imageSeconds).toBe(15);
+    expect(
+      plan.editList.shots.slice(0, 3).map((slot) => `${slot.source.path}:${moves(slot)}`),
+    ).toEqual(["/a.png:in", "/a.png:out", "/a.png:in"]);
+    const paths = plan.editList.shots.map((slot) => slot.source.path);
+    expect(new Set(paths)).toEqual(new Set(["/a.png", "/b.png"]));
+    expect(paths.indexOf("/b.png")).toBe(paths.lastIndexOf("/a.png") + 1);
   });
 
   it("uses the seconds it is given", () => {
@@ -323,7 +318,11 @@ describe("the edit list", () => {
 });
 
 describe("the motion styles", () => {
-  const eight = input({ body: { path: "/b.mp3", seconds: 8 * 15 } });
+  // One image a slot, so what these check is the motion rather than the cadence.
+  const eight = input({
+    body: { path: "/b.mp3", seconds: 8 * 15 },
+    images: Array.from({ length: 8 }, (_image, at) => `/p/images/${String(at + 1)}.png`),
+  });
   const run = (over: Partial<PlanInput>) =>
     planRender({ ...eight, ...over }).editList.shots.map(moves);
 
