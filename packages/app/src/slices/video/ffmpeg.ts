@@ -19,12 +19,19 @@ import { type Segment, segments, transitionHalves } from "./transitions.js";
 // and a wrapper would hide it. Every value goes into an argument array, never a shell
 // string, so a title or a filename cannot become a command.
 
-// zoompan works on a still that has been pre-scaled, because it steps the zoom in
-// sub-pixel increments and a source at output resolution visibly jitters where the zoom is
-// meant to be smooth and linear. A pan steps its crop window in whole source pixels, so
-// the same four times gives it quarter-pixel steps on screen. Four times the frame is
-// enough at 122.5%.
-const prescale = 4;
+// zoompan can only ever land its crop window on a whole source pixel, so a move slow enough
+// that one frame advances less than a pixel does not advance evenly: it holds for a frame or
+// two, then jumps a whole one. Pre-scaling the still makes that step smaller but never
+// smooth, because what shows is the unevenness and not the size: a 28 second pan across
+// 122.5% advances about half an output pixel a frame, which at four times the frame measured
+// as steps of 0.20 and 0.71 output pixels in turn, a velocity swinging by three and a half
+// times every frame. That is the shake. So the frames are generated at the pre-scaled size
+// and `perspective` samples the crop window between whole pixels, which measured 0.7% off an
+// even step where zoompan measured 56.5%, at the same render time and the same sharpness.
+//
+// Two times the frame is the floor that keeps it sharp: the window is 1/1.225 of the still,
+// so at two times it is still wider than the output frame and comes down to it rather than up.
+const prescale = 2;
 const sampleRate = 44100;
 const channelLayout = "stereo";
 
@@ -256,7 +263,7 @@ function pictureChain(
         `setpts=PTS-STARTPTS,fps=${String(fps)},format=yuv420p${label}`,
     };
   }
-  const move = zoompan(shot.motion, shot.frames, frameExpression(from, count, shot.frames));
+  const move = kenBurns(shot.motion, shot.frames, frameExpression(from, count, shot.frames));
   // A still that does not move has no sub-pixel steps to smooth, so it is not prescaled.
   const factor = move === undefined ? 1 : prescale;
   const wide = frame.width * factor;
@@ -264,6 +271,17 @@ function pictureChain(
   // Clips that meet in a transition are brought to one pixel format first, since xfade
   // refuses to blend two that differ; a plain shot is left as it always was.
   const plain = from === 0 && count === shot.frames;
+  // zoompan turns the one still into the shot's frames either way, because it is what ends
+  // the stream at exactly `count`. A shot that does not move is taken straight to the frame.
+  // One that moves is held at the prescaled size, so that `perspective` has room to sample
+  // its crop window between whole pixels, and comes down to the frame after.
+  const motion =
+    move === undefined
+      ? `zoompan=z='1':d=${count}:x='${centredX}':y='${centredY}':` +
+        `s=${frame.width}x${frame.height}:fps=${frame.fps}`
+      : `zoompan=z='1':d=${count}:x='0':y='0':s=${wide}x${tall}:fps=${frame.fps},` +
+        `perspective=${sourceQuad(move)}:sense=source:eval=frame:interpolation=cubic,` +
+        `scale=${frame.width}:${frame.height}`;
   return {
     inputs: ["-i", source.path],
     chain:
@@ -272,9 +290,7 @@ function pictureChain(
       (grade === undefined ? "" : `${grade},`) +
       // Cover the frame and centre-crop, never letterbox.
       `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
-      `zoompan=z='${move?.z ?? "1"}':d=${count}:` +
-      `x='${move?.x ?? centredX}':y='${move?.y ?? centredY}':` +
-      `s=${frame.width}x${frame.height}:fps=${frame.fps},setsar=1${plain ? "" : ",format=yuv420p"}${label}`,
+      `${motion},setsar=1${plain ? "" : ",format=yuv420p"}${label}`,
   };
 }
 
@@ -502,38 +518,54 @@ const progressArgs = [
 const centredX = "iw/2-(iw/zoom/2)";
 const centredY = "ih/2-(ih/zoom/2)";
 
-interface Zoompan {
+interface KenBurns {
+  // The zoom at this frame; the crop window is W/z wide and H/z tall.
   readonly z: string;
+  // That window's top left corner, in the pre-scaled still's own pixels.
   readonly x: string;
   readonly y: string;
 }
 
-// zoompan's expressions for a motion, or undefined for one that does not move. `on` is
-// zoompan's output frame counter, 0 to d-1 (`at` shifts it for part of a shot), and a
-// one-frame shot has no span to divide by, so it holds where it starts. `zoom` in x and y is
-// the current zoom, so iw-iw/zoom is the room the crop window has to travel in.
-function zoompan(motion: Motion, frames: number, at = "on"): Zoompan | undefined {
+// The crop window a motion shows at each frame, or undefined for one that does not move.
+// `on` is the filter's output frame counter, 0 to d-1 (`at` shifts it for part of a shot),
+// and a one-frame shot has no span to divide by, so it holds where it starts. The window is
+// W/z of the still, so W-W/z is the room it has to travel in.
+function kenBurns(motion: Motion, frames: number, at = "on"): KenBurns | undefined {
   if (motion.kind === "still") return undefined;
   const range = zoomRange(motion.percent);
   if (range === undefined) return undefined;
   const span = frames - 1;
   if (motion.kind === "zoom") {
-    // Zoom in rises from 100%, zoom out falls back to it, linear over the shot.
+    // Zoom in rises from 100%, zoom out falls back to it, linear over the shot. Parenthesised
+    // because the window's own size divides by it.
     const z =
       motion.direction === "in"
         ? span < 1
           ? range.from
-          : `${range.from}+${range.by}*${at}/${span}`
+          : `(${range.from}+${range.by}*${at}/${span})`
         : span < 1
           ? range.to
-          : `${range.to}-${range.by}*${at}/${span}`;
-    return { z, x: centredX, y: centredY };
+          : `(${range.to}-${range.by}*${at}/${span})`;
+    return { z, x: `(W-W/${z})/2`, y: `(H-H/${z})/2` };
   }
   return {
     z: range.to,
-    x: `(iw-iw/zoom)*(${travel(motion.from.x, motion.to.x, span, at)})`,
-    y: `(ih-ih/zoom)*(${travel(motion.from.y, motion.to.y, span, at)})`,
+    x: `(W-W/${range.to})*(${travel(motion.from.x, motion.to.x, span, at)})`,
+    y: `(H-H/${range.to})*(${travel(motion.from.y, motion.to.y, span, at)})`,
   };
+}
+
+// `perspective`'s four source corners for that window: top left, top right, bottom left,
+// bottom right, in the pre-scaled still's own pixels. `W` and `H` are the still's size, and
+// the filter samples between the corners, which is what makes the move land off the pixel
+// grid where zoompan could only step whole pixels.
+function sourceQuad(move: KenBurns): string {
+  const right = `${move.x}+W/${move.z}`;
+  const bottom = `${move.y}+H/${move.z}`;
+  return (
+    `x0='${move.x}':y0='${move.y}':x1='${right}':y1='${move.y}':` +
+    `x2='${move.x}':y2='${bottom}':x3='${right}':y3='${bottom}'`
+  );
 }
 
 // A share of the room from `from` to `to`, linear over the shot. Built in whole
