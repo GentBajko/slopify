@@ -138,6 +138,76 @@ describe("revision provider publication", () => {
       h.close();
     }
   });
+
+  // The page cannot paint a new image from the frame alone, so it refetches on this one
+  // (`web/src/events.ts`). Without the frame the images only appear on a reload.
+  it("tells the open page that each image landed", async () => {
+    const h = revisionFixture();
+    try {
+      const config = {
+        ...h.config,
+        sources: { ...h.config.sources, images: "generate" as const },
+        images: { provider: "fal", model: "image" },
+        imagePrompts: [{ name: "image", number: 1 }],
+        rendered: { "imagePrompts.0": "A prompt" },
+      };
+      h.deps.db
+        .prepare("UPDATE projects SET config=? WHERE id=?")
+        .run(JSON.stringify(config), h.projectId);
+      for (const kind of stageKinds)
+        h.deps.db
+          .prepare(
+            "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,'generate','pending')",
+          )
+          .run(kind, h.projectId, kind);
+      const baseline = await ensureBaseline(h.deps, h.projectId);
+      if (!baseline.ok) throw new Error("Expected baseline");
+      admitInitialRevision(h.deps, baseline.view, catalogue);
+      const stage = executionStages(h.deps, h.projectId).find((row) => row.kind === "images");
+      if (stage === undefined) throw new Error("Missing image invocation");
+      const piece = workPieces(h.deps.db, stage.work.workId)[0];
+      if (piece === undefined) throw new Error("Missing image request");
+      const providers: StageProviders = {
+        llm: async () => {
+          throw new Error("Unexpected LLM");
+        },
+        tts: async () => {
+          throw new Error("Unexpected narration");
+        },
+        image: async () => ({
+          ok: true as const,
+          value: { bytes: new Uint8Array([1, 2, 3]), mime: "image/png" as const },
+        }),
+        forPiece: () => providers,
+      };
+      const emitted: ProjectEvent[] = [];
+      const context: StageContext = {
+        stage,
+        work: stage.work,
+        signal: new AbortController().signal,
+        maySubmit: () => true,
+        emit: (event) => {
+          emitted.push(event);
+        },
+      };
+      expect(await executeProviderRecipe(h.deps, context, providers, piece)).toBe("done");
+      const landed = getRevisionView(h.deps, h.projectId, baseline.view.revision.id)?.outputs.find(
+        (row) => row.output.role === "image",
+      );
+      expect(landed).toBeDefined();
+      expect(emitted).toContainEqual({
+        type: "image.landed",
+        projectId: h.projectId,
+        outputId: landed?.output.id,
+        index: 1,
+        revisionId: stage.work.revisionId,
+        workId: stage.work.workId,
+        workPieceId: piece.id,
+      });
+    } finally {
+      h.close();
+    }
+  });
 });
 
 it("streams narration with exact origin identity and keeps sibling previews", async () => {

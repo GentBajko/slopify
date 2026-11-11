@@ -231,6 +231,20 @@ export async function executeProviderRecipe(
       },
     );
     await publishResult(deps, context, piece, [output], { prompt }, asset);
+    // The frame names the output and its place, not the row or the file behind them, so the
+    // open page refetches on it rather than painting from it (`web/src/events.ts`); a run of
+    // 240 images coalesces those refetches there, so every image still sends its own frame.
+    context.emit({
+      type: "image.landed",
+      projectId: context.work.projectId,
+      outputId: output.output.id,
+      // Thumbnails and the establishing image have no place in the image order; the page
+      // refetches on any of them just the same.
+      index: index ?? 0,
+      revisionId: context.work.revisionId,
+      workId: context.work.workId,
+      workPieceId: piece.id,
+    });
     if (softened !== undefined) clearSoftening(deps.db, context.work.projectId, [piece.key]);
     deps.count?.(
       "stage.completed",
