@@ -1,13 +1,16 @@
 import type { DatabaseSync } from "node:sqlite";
+import { outputsOf } from "../storage/repo.js";
 import { markUploaded, type UploadMarkResult } from "../uploads/repo.js";
 
 // The YouTube video each upload became, and its A/B test
 // (`0045-youtube-videos.sql`). `short` is null for the long video, as in the fill queue.
 //
-// The long video on YouTube and the project's "uploaded" mark (`uploads/repo.ts`, which
-// Projects, Home and the calendar read) are one fact: recording the long video as done marks
-// the project uploaded, and forgetting it takes the mark back off. A short has no mark of its
-// own; the long video stands for the project.
+// The project's "uploaded" mark (`uploads/repo.ts`, which Projects, Home and the calendar
+// read) stands for every upload the project has: the long video and each of its shorts. A
+// short has no mark of its own, so recording the long video marks the project only once the
+// shorts are up too - otherwise one upload would take the ones still waiting out of Ready to
+// upload, and the extension would never offer them again. Forgetting the long video takes the
+// mark back off.
 
 export type AbState = "none" | "waiting" | "started" | "failed";
 export type TaskState = "none" | "waiting" | "done" | "failed";
@@ -54,6 +57,20 @@ export function videoIdOf(text: string): string | undefined {
 
 const slot = (short: number | null): number => short ?? 0;
 
+// Every upload the project has is on YouTube: the long video, and each short it rendered
+// (`short_video`, the outputs the pack lists). A project whose long video is up while a short
+// still waits is not uploaded, so the short keeps its place in Ready to upload.
+function allOnYoutube(db: DatabaseSync, projectId: string): boolean {
+  if (videoOf(db, projectId, null)?.uploadState !== "done") return false;
+  const shorts = new Set(
+    outputsOf(db, projectId)
+      .filter((output) => output.role === "short_video")
+      .map((output) => output.meta.short)
+      .filter((number) => number !== undefined),
+  );
+  return [...shorts].every((number) => videoOf(db, projectId, number)?.uploadState === "done");
+}
+
 function rowOf(row: Record<string, unknown>): YoutubeVideo {
   const short = Number(row.short);
   return {
@@ -94,8 +111,7 @@ export function recordVideo(
          ELSE excluded.upload_state END,
        video_id=excluded.video_id, recorded_at=excluded.recorded_at`,
   ).run(projectId, slot(short), videoId, at, state);
-  if (short === null && videoOf(db, projectId, null)?.uploadState === "done")
-    markUploaded(db, projectId, true, at);
+  if (allOnYoutube(db, projectId)) markUploaded(db, projectId, true, at);
 }
 
 // Studio said the upload was scheduled or published. False when no such upload was filled.
@@ -112,13 +128,14 @@ export function confirmUpload(
         "UPDATE youtube_videos SET upload_state='done' WHERE project_id=? AND short=? AND video_id=?",
       )
       .run(projectId, slot(short), videoId).changes > 0;
-  if (confirmed && short === null) markUploaded(db, projectId, true, at);
+  if (confirmed && allOnYoutube(db, projectId)) markUploaded(db, projectId, true, at);
   return confirmed;
 }
 
-// Forgets the video an upload became (deleted on YouTube, or a wrong link). Forgetting a long
-// video that was on YouTube takes the project's uploaded mark off with it; an upload only
-// filled in Studio never set the mark, so forgetting it leaves a mark made by hand.
+// Forgets the video an upload became (deleted on YouTube, or a wrong link). Forgetting one
+// that was on YouTube - the long video or a short - takes the project's uploaded mark off with
+// it, since the mark stands for all of them; an upload only filled in Studio never set the
+// mark, so forgetting it leaves a mark made by hand.
 export function forgetVideo(
   db: DatabaseSync,
   projectId: string,
@@ -130,7 +147,8 @@ export function forgetVideo(
     projectId,
     slot(short),
   );
-  if (short === null && was?.uploadState === "done") markUploaded(db, projectId, false, at);
+  if (was?.uploadState === "done" && !allOnYoutube(db, projectId))
+    markUploaded(db, projectId, false, at);
 }
 
 // "Mark not uploaded" (Home, Projects): the long video's link goes with the mark, so the two

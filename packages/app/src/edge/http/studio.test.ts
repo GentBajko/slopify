@@ -915,11 +915,13 @@ describe("YouTube videos and their A/B tests", () => {
     expect(await (await put("https://youtu.be/6tRcYUoxyQo")).json()).toMatchObject({
       videos: [{ videoId: "6tRcYUoxyQo", uploadState: "done" }],
     });
-    // The long video's link and Mark uploaded are one fact: the project is uploaded now.
-    expect(uploadedProjects(h.db).get("p1")).toBe("2026-09-27T10:00:00.000Z");
     expect(await onYoutube()).toBe(true);
-    // Forgetting the link takes the mark off again.
-    expect(await (await put("")).json()).toEqual({ videos: [] });
+    // The project's mark stands for every upload it has, and this one still has a short to go.
+    expect(uploadedProjects(h.db).has("p1")).toBe(false);
+    await h.call("/videos/p1", json({ short: 1, link: "https://youtu.be/SoiEotWS3dA" }, "PUT"));
+    expect(uploadedProjects(h.db).get("p1")).toBe("2026-09-27T10:00:00.000Z");
+    // Forgetting the long video's link takes the mark off again.
+    expect(await (await put("")).json()).toMatchObject({ videos: [{ short: 1 }] });
     expect(uploadedProjects(h.db).has("p1")).toBe(false);
     expect(await onYoutube()).toBe(false);
   });
@@ -932,8 +934,11 @@ describe("YouTube videos and their A/B tests", () => {
     await h.call("/ext/video", ext(token, upload));
     expect(uploadedProjects(h.db).has("p1")).toBe(false);
     await h.call("/ext/video/done", ext(token, upload));
+    // Confirmed, but the project's short has not gone up yet.
+    expect(uploadedProjects(h.db).has("p1")).toBe(false);
+    await h.call("/videos/p1", json({ short: 1, link: "https://youtu.be/SoiEotWS3dA" }, "PUT"));
     expect(uploadedProjects(h.db).has("p1")).toBe(true);
-    // A short on YouTube doesn't stand for the project.
+    // A short on YouTube doesn't stand for the project either.
     const other = harness();
     finished(other.output);
     await other.call("/videos/p1", json({ short: 1, link: "https://youtu.be/6tRcYUoxyQo" }, "PUT"));

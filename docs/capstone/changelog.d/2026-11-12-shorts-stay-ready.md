@@ -1,0 +1,6 @@
+# A video's shorts stay in Ready to upload until they are up
+
+- **The project's uploaded mark now stands for every upload it has,** the long video and each short, not for the long video alone. It was one fact before — the long video on YouTube meant the project was uploaded — and that quietly took the shorts still waiting out of Ready to upload with it.
+- **Why it bit:** Studio re-reads the long video after each upload. Uploading short 1 made Slopify record the long video again, which re-applied the mark, which hid shorts 2 and 3. The extension then said "Nothing waits to be uploaded" while two shorts had never gone up, and taking the mark off by hand lasted only until the next upload re-applied it.
+- **Nothing changed about what the extension already knew:** every item in its list carried its own uploaded flag all along. Only the project-level mark was wrong, so Projects, Home, the calendar and the extension now agree without any of them being taught about shorts.
+- **Forgetting an upload that was on YouTube takes the mark off again,** a short's as well as the long video's, since the mark stands for all of them. An upload only filled in Studio never set the mark, so forgetting it still leaves a mark made by hand.
