@@ -187,8 +187,7 @@ it("renders a silent slideshow in the selected shape without requiring narration
     expect(await executeExportRecipe(h.deps, part.context, part.piece)).toBe("done");
     const run = vi.mocked(runFfmpeg).mock.calls[0]?.[0];
     expect(run?.args).toContain("-an");
-    // The chain ends at the chosen shape, whatever size the motion was sampled at.
-    expect(run?.args.join(" ")).toContain("scale=1080:1920,setsar=1");
+    expect(run?.args.join(" ")).toContain("s=1080x1920");
     const video = h
       .view(saved.view.revision.id)
       .outputs.find((row) => row.selected && row.output.role === "video");

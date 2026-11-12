@@ -139,21 +139,15 @@ describe("clipArgs", () => {
     motion: zoomIn,
   };
   const moving = (motion: Motion, frames = 150): Shot => ({ ...slot, motion, frames });
-  // The zoom a graph sampled its window at: the window is W/z wide, so the corner reads
-  // (W-W/z)/2 for a centred zoom. Undefined when the shot does not move and has no window.
-  const zoomOf = (args: string) => /x0='\(W-W\/(.+?)\)\/2'/.exec(args)?.[1];
 
   it("renders one still through the prescaled zoom into one silent clip", () => {
     const args = clipArgs(plan(), slot, "/w/c1.mp4");
     expect(args.filter((_arg, at) => args[at - 1] === "-i")).toEqual(["/p/images/001.png"]);
     expect(args[args.indexOf("-filter_complex") + 1]).toBe(
       "[0:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
-        "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160," +
-        "zoompan=z='1':d=150:x='0':y='0':s=3840x2160:fps=30," +
-        "perspective=x0='(W-W/(1+0.225*on/149))/2':y0='(H-H/(1+0.225*on/149))/2':x1='(W-W/(1+0.225*on/149))/2+W/(1+0.225*on/149)':y1='(H-H/(1+0.225*on/149))/2':" +
-        "x2='(W-W/(1+0.225*on/149))/2':y2='(H-H/(1+0.225*on/149))/2+H/(1+0.225*on/149)':x3='(W-W/(1+0.225*on/149))/2+W/(1+0.225*on/149)':y3='(H-H/(1+0.225*on/149))/2+H/(1+0.225*on/149)':" +
-        "sense=source:eval=frame:interpolation=cubic," +
-        "scale=1920:1080,setsar=1[v]",
+        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
+        "zoompan=z='1+0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
+        "s=1920x1080:fps=30,setsar=1[v]",
     );
   });
 
@@ -161,56 +155,56 @@ describe("clipArgs", () => {
     const { clips } = slideshowClips(
       plan({ body: { path: "/b.mp3", seconds: 40 }, imageSeconds: 15, images: ["/a.png"] }),
     );
-    const zooms = clips.map((clip) => {
-      const args = clipArgs(plan(), clip.shot, "/w/c.mp4").join(" ");
-      return [zoomOf(args), /zoompan=z='1':d=(\d+):/.exec(args)?.[1]];
-    });
+    const zooms = clips.map((clip) =>
+      /zoompan=z='([^']+)':d=(\d+):/
+        .exec(clipArgs(plan(), clip.shot, "/w/c.mp4").join(" "))
+        ?.slice(1),
+    );
     // 450 frames: the zoom reaches 1 + 0.225 on the last frame, on = 449.
     expect(zooms).toEqual([
-      ["(1+0.225*on/449)", "450"],
-      ["(1.225-0.225*on/449)", "450"],
-      ["(1+0.225*on/299)", "300"],
+      ["1+0.225*on/449", "450"],
+      ["1.225-0.225*on/449", "450"],
+      ["1+0.225*on/299", "300"],
     ]);
   });
 
   it("zooms the project's own range, and not at all at 0%", () => {
     const zoom = (percent: number, direction: "in" | "out") =>
-      zoomOf(clipArgs(plan(), moving({ kind: "zoom", direction, percent }), "/w/c1.mp4").join(" "));
-    expect(zoom(22.5, "in")).toBe("(1+0.225*on/149)");
-    expect(zoom(22.5, "out")).toBe("(1.225-0.225*on/149)");
-    expect(zoom(10, "in")).toBe("(1+0.1*on/149)");
-    expect(zoom(10, "out")).toBe("(1.1-0.1*on/149)");
-    // 0% does not move, so there is no window to sample and no perspective at all.
-    expect(zoom(0, "in")).toBeUndefined();
-    expect(zoom(0, "out")).toBeUndefined();
+      /zoompan=z='([^']+)'/.exec(
+        clipArgs(plan(), moving({ kind: "zoom", direction, percent }), "/w/c1.mp4").join(" "),
+      )?.[1];
+    expect(zoom(22.5, "in")).toBe("1+0.225*on/149");
+    expect(zoom(22.5, "out")).toBe("1.225-0.225*on/149");
+    expect(zoom(10, "in")).toBe("1+0.1*on/149");
+    expect(zoom(10, "out")).toBe("1.1-0.1*on/149");
+    expect(zoom(0, "in")).toBe("1");
+    expect(zoom(0, "out")).toBe("1");
     // Still cover-scaled and cropped, but to the frame itself: nothing to smooth.
-    for (const still of [moving({ kind: "still" }), moving({ ...zoomIn, percent: 0 })]) {
-      const args = clipArgs(plan(), still, "/w/c1.mp4").join(" ");
-      expect(args).toContain(
+    for (const still of [moving({ kind: "still" }), moving({ ...zoomIn, percent: 0 })])
+      expect(clipArgs(plan(), still, "/w/c1.mp4").join(" ")).toContain(
         "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080," +
           "zoompan=z='1':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':",
       );
-      expect(args).not.toContain("perspective=");
-    }
   });
 
   it("zooms out when the shot says so", () => {
     const args = clipArgs(plan(), moving({ ...zoomIn, direction: "out" }), "/w/c2.mp4");
-    expect(zoomOf(args.join(" "))).toBe("(1.225-0.225*on/149)");
+    expect(args.join(" ")).toContain("zoompan=z='1.225-0.225*on/149':d=150:");
   });
 
-  it("pre-scales to twice the frame in either orientation, and comes back down to it", () => {
+  it("pre-scales to four times the frame in either orientation", () => {
     const graph = clipArgs(plan({ format: "9:16" }), slot, "/w/c1.mp4").join(" ");
-    expect(graph).toContain("scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840");
-    expect(graph).toContain("s=2160x3840");
-    expect(graph).toContain("scale=1080:1920,setsar=1");
+    expect(graph).toContain("scale=4320:7680:force_original_aspect_ratio=increase,crop=4320:7680");
+    expect(graph).toContain("s=1080x1920");
   });
 
   it("holds the zoom still on a one-frame slot rather than dividing by zero", () => {
-    expect(zoomOf(clipArgs(plan(), { ...slot, frames: 1 }, "/w/c1.mp4").join(" "))).toBe("1");
+    expect(clipArgs(plan(), { ...slot, frames: 1 }, "/w/c1.mp4").join(" ")).toContain(
+      "zoompan=z='1':d=1:",
+    );
     expect(
-      zoomOf(clipArgs(plan(), moving({ ...zoomIn, direction: "out" }, 1), "/w/c1.mp4").join(" ")),
-    ).toBe("1.225");
+      clipArgs(plan(), moving({ ...zoomIn, direction: "out" }, 1), "/w/c1.mp4").join(" "),
+    ).toContain("zoompan=z='1.225':d=1:");
   });
 
   describe("a pan", () => {
@@ -221,35 +215,32 @@ describe("clipArgs", () => {
       percent,
     });
     const graph = (shot: Shot) => {
-      const matched = /perspective=x0='([^']+)':y0='([^']+)':/.exec(
+      const matched = /zoompan=z='([^']+)':d=\d+:x='([^']+)':y='([^']+)'/.exec(
         clipArgs(plan(), shot, "/w/c1.mp4").join(" "),
       );
-      const [, x, y] = matched ?? [];
-      return matched === null || x === undefined || y === undefined
-        ? undefined
-        : [/\(W-W\/([\d.]+)\)/.exec(x)?.[1], x, y];
+      return matched?.slice(1);
     };
 
     it("holds a fixed zoom and moves the crop across the room it leaves", () => {
       expect(graph(moving(pan([0, 0.5], [1, 0.5])))).toEqual([
         "1.225",
-        "(W-W/1.225)*(0+1*on/149)",
-        "(H-H/1.225)*(0.5)",
+        "(iw-iw/zoom)*(0+1*on/149)",
+        "(ih-ih/zoom)*(0.5)",
       ]);
       expect(graph(moving(pan([1, 0.5], [0, 0.5])))).toEqual([
         "1.225",
-        "(W-W/1.225)*(1-1*on/149)",
-        "(H-H/1.225)*(0.5)",
+        "(iw-iw/zoom)*(1-1*on/149)",
+        "(ih-ih/zoom)*(0.5)",
       ]);
       expect(graph(moving(pan([0.5, 0], [0.5, 1]), 450))).toEqual([
         "1.225",
-        "(W-W/1.225)*(0.5)",
-        "(H-H/1.225)*(0+1*on/449)",
+        "(iw-iw/zoom)*(0.5)",
+        "(ih-ih/zoom)*(0+1*on/449)",
       ]);
       expect(graph(moving(pan([0.5, 1], [0.5, 0], 10)))).toEqual([
         "1.1",
-        "(W-W/1.1)*(0.5)",
-        "(H-H/1.1)*(1-1*on/149)",
+        "(iw-iw/zoom)*(0.5)",
+        "(ih-ih/zoom)*(1-1*on/149)",
       ]);
     });
 
@@ -257,8 +248,8 @@ describe("clipArgs", () => {
       // 0.3 - 0.1 is 0.19999999999999998 in binary floating point.
       expect(graph(moving(pan([0.1, 0.7], [0.3, 0.2], 12.5)))).toEqual([
         "1.125",
-        "(W-W/1.125)*(0.1+0.2*on/149)",
-        "(H-H/1.125)*(0.7-0.5*on/149)",
+        "(iw-iw/zoom)*(0.1+0.2*on/149)",
+        "(ih-ih/zoom)*(0.7-0.5*on/149)",
       ]);
     });
 
@@ -267,7 +258,7 @@ describe("clipArgs", () => {
       const ends = (axis: string): number[] => {
         // At on = span, `by*on/span` is `by` itself.
         const [, start = "", sign = "+", by = "0"] =
-          /^\((?:W-W|H-H)\/[\d.]+\)\*\(([\d.]+)(?:([+-])([\d.]+)\*on\/\d+)?\)$/.exec(axis) ?? [];
+          /^\((?:iw-iw|ih-ih)\/zoom\)\*\(([\d.]+)(?:([+-])([\d.]+)\*on\/\d+)?\)$/.exec(axis) ?? [];
         return [Number(start), Number(start) + (sign === "-" ? -1 : 1) * Number(by)];
       };
       const shots = plan({
@@ -288,14 +279,14 @@ describe("clipArgs", () => {
     it("holds where it starts on a one-frame shot", () => {
       expect(graph(moving(pan([0, 0.5], [1, 0.5]), 1))).toEqual([
         "1.225",
-        "(W-W/1.225)*(0)",
-        "(H-H/1.225)*(0.5)",
+        "(iw-iw/zoom)*(0)",
+        "(ih-ih/zoom)*(0.5)",
       ]);
     });
 
-    it("is prescaled like a zoom, for room to sample between pixels", () => {
+    it("is prescaled like a zoom, for quarter-pixel steps", () => {
       expect(clipArgs(plan(), moving(pan([0, 0.5], [1, 0.5])), "/w/c1.mp4").join(" ")).toContain(
-        "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,",
+        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320,",
       );
     });
   });

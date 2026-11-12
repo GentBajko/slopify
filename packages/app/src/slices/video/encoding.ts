@@ -134,7 +134,7 @@ const testArgs = [
 ];
 
 // The filters a render runs in the NVENC ffmpeg besides the encoder.
-const neededFilters = ["zoompan", "perspective", "xfade", "ass"];
+const neededFilters = ["zoompan", "xfade", "ass"];
 
 // Which ffmpeg can encode on an NVIDIA card, asked once and remembered until Slopify restarts.
 // The bundled ffmpeg first, then the computer's own: unlike everything else, NVENC is the

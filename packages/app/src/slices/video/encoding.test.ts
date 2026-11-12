@@ -93,10 +93,7 @@ function fakeExec(
     if (machine === undefined || machine === "missing") throw new Error(`spawn ${bin} ENOENT`);
     if (args.includes("-encoders")) return machine.encoders;
     if (args.includes("-filters"))
-      return (
-        " .. ass               V->V       Render ASS\n .. zoompan           V->V       Zoom\n" +
-        " .. perspective      V->V       Perspective\n .S xfade             VV->V      Cross fade\n"
-      );
+      return " .. ass               V->V       Render ASS\n .. zoompan           V->V       Zoom\n .S xfade             VV->V      Cross fade\n";
     if (!machine.encodes) throw new Error("ffmpeg exited with code 1: OpenEncodeSessionEx failed");
     return "";
   };
