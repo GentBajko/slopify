@@ -20,6 +20,7 @@ const renderDefaults = {
   videoEncoder: "cpu",
   clipEncodeSpeed: "thorough",
   renderPriority: "background",
+  videoRenderConcurrency: 1,
 } as const;
 
 interface Harness {

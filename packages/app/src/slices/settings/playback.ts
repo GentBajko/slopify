@@ -7,7 +7,12 @@ import { englishSubtitleModels } from "../../kernel/ports/subtitles.js";
 import type { FieldError } from "../admission/rules.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { loudnessFields } from "../loudness/model.js";
-import { clipEncodeSpeeds, renderPriorities, videoEncoders } from "../video/encoding.js";
+import {
+  clipEncodeSpeeds,
+  renderPriorities,
+  videoEncoders,
+  videoRenderConcurrencyMax,
+} from "../video/encoding.js";
 import type { AppSettings } from "./model.js";
 import { appearances, defaultSettings } from "./model.js";
 import { readJsonSetting, writeSetting } from "./repo.js";
@@ -30,6 +35,7 @@ const subtitleModelKey = "subtitleModel";
 const videoEncoderKey = "videoEncoder";
 const clipEncodeSpeedKey = "clipEncodeSpeed";
 const renderPriorityKey = "renderPriority";
+const videoRenderConcurrencyKey = "videoRenderConcurrency";
 
 const silenceGapValue = z.number().int().min(0).max(silenceGapSecondsMax);
 const appearanceValue = z.enum(appearances);
@@ -37,6 +43,7 @@ const subtitleModelValue = z.enum(englishSubtitleModels);
 const videoEncoderValue = z.enum(videoEncoders);
 const clipEncodeSpeedValue = z.enum(clipEncodeSpeeds);
 const renderPriorityValue = z.enum(renderPriorities);
+const videoRenderConcurrencyValue = z.number().int().min(1).max(videoRenderConcurrencyMax);
 const loudnessValue = z.object({
   enabled: z.boolean(),
   videoLufs: z.number(),
@@ -71,6 +78,12 @@ export function readSettings(deps: PlaybackDeps): AppSettings {
       renderPriorityKey,
       renderPriorityValue,
       defaultSettings.renderPriority,
+    ),
+    videoRenderConcurrency: parsed(
+      deps,
+      videoRenderConcurrencyKey,
+      videoRenderConcurrencyValue,
+      defaultSettings.videoRenderConcurrency,
     ),
   };
 }
@@ -117,6 +130,12 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
       message: "Choose Normal or Background in Settings → Production defaults → Encoding priority.",
     });
   }
+  if (!videoRenderConcurrencyValue.safeParse(settings.videoRenderConcurrency).success) {
+    fields.push({
+      field: "videoRenderConcurrency",
+      message: `Enter a whole number between 1 and ${String(videoRenderConcurrencyMax)} in Settings → Production defaults → Videos rendered at once.`,
+    });
+  }
   if (fields.length > 0) {
     return { ok: false, fields };
   }
@@ -127,6 +146,7 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
   writeSetting(deps.db, videoEncoderKey, JSON.stringify(settings.videoEncoder));
   writeSetting(deps.db, clipEncodeSpeedKey, JSON.stringify(settings.clipEncodeSpeed));
   writeSetting(deps.db, renderPriorityKey, JSON.stringify(settings.renderPriority));
+  writeSetting(deps.db, videoRenderConcurrencyKey, JSON.stringify(settings.videoRenderConcurrency));
   return { ok: true, settings };
 }
 

@@ -241,4 +241,5 @@ export const defaultSettings: AppSettings = {
   videoEncoder: "cpu",
   clipEncodeSpeed: "thorough",
   renderPriority: "background",
+  videoRenderConcurrency: 1,
 };

@@ -39,6 +39,15 @@ const priorityChoices: readonly { readonly value: RenderPriority; readonly label
   { value: "background", label: "Background (your other programs come first)" },
 ];
 
+// One at a time is the default: a render reads a whole picture track and encodes hours of it,
+// so a second one takes the processor, disk and memory the first one and this page are using.
+const renderAtOnceChoices: readonly { readonly value: number; readonly label: string }[] = [
+  { value: 1, label: "One at a time (recommended)" },
+  { value: 2, label: "Two" },
+  { value: 3, label: "Three" },
+  { value: 4, label: "Four" },
+];
+
 // Empty, negative, fractional or past the bound: one sentence, the server's own
 // (slices/settings/playback.ts).
 export function gapProblem(value: string): string | undefined {
@@ -282,6 +291,27 @@ function RenderSettings({
             onChange={(event) => {
               const picked = clipEncodeChoices.find((one) => one.value === event.target.value);
               if (picked !== undefined) save.mutate({ ...current, clipEncodeSpeed: picked.value });
+            }}
+          />
+        </Field>
+        <Field
+          label="Videos rendered at once"
+          help="A second video waits until the first has finished. More at once share one computer, so each takes longer and the app has less left to answer with."
+          error={failed("videoRenderConcurrency", "videos rendered at once")}
+        >
+          <Select
+            className="self-start"
+            value={String(current.videoRenderConcurrency ?? 1)}
+            options={renderAtOnceChoices.map((one) => ({
+              value: String(one.value),
+              label: one.label,
+            }))}
+            onChange={(event) => {
+              const picked = renderAtOnceChoices.find(
+                (one) => String(one.value) === event.target.value,
+              );
+              if (picked !== undefined)
+                save.mutate({ ...current, videoRenderConcurrency: picked.value });
             }}
           />
         </Field>

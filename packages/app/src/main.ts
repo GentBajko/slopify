@@ -190,6 +190,7 @@ import {
   renderMachine,
 } from "./slices/video/encoding.js";
 import { probeDurationMs, runFfmpegAt } from "./slices/video/ffmpeg.js";
+import { createRenderGate, type RenderGate } from "./slices/video/render-gate.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -1241,6 +1242,7 @@ interface Wiring {
   readonly catalogue: CatalogueStore;
   // The bundled sample's build paces the words itself instead of listening for them.
   readonly alignSubtitles?: SubtitleAligner | undefined;
+  readonly renderGate?: RenderGate | undefined;
   // Told after a step's row is written: a review that sent its item back starts the redo.
   readonly onFinished?: ((work: WorkRef) => void) | undefined;
 }
@@ -1262,6 +1264,9 @@ export function wireRunner({
   nvenc = async () => ({ available: false, reason: noNvenc }),
   // Settings → Production defaults → Subtitle timing model, read as each alignment starts.
   alignSubtitles: aligner = alignSubtitlesWith(() => readSettings({ db, log }).subtitleModel),
+  // Settings → Production defaults → Videos rendered at once, read as each render asks for its
+  // place, so a change takes hold without a restart.
+  renderGate = createRenderGate(() => readSettings({ db, log }).videoRenderConcurrency),
 }: Wiring): Runner & { readonly checkpoints: CheckpointAuthority<CheckpointRow> } {
   // A stage counts what it did and the queue is flushed after each new event. `record`
   // swallows its own failures, so this can neither fail a stage nor widen what leaves the
@@ -1281,6 +1286,9 @@ export function wireRunner({
     // Settings → Production defaults → Rendering, read as each render starts.
     renderMachine: (projectId: string) =>
       renderMachine({ settings: readSettings({ db, log }), nvenc, log, projectId }),
+    // One queue for every render this computer makes, so a second video waits rather than
+    // taking the processor and memory the first one and the page are using.
+    renderGate,
     audioPreviews,
     count,
   };

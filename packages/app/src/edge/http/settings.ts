@@ -79,6 +79,7 @@ const playbackBody = z.object({
   videoEncoder: z.enum(videoEncoders).optional(),
   clipEncodeSpeed: z.enum(clipEncodeSpeeds).optional(),
   renderPriority: z.enum(renderPriorities).optional(),
+  videoRenderConcurrency: z.number().optional(),
 });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
@@ -101,6 +102,7 @@ export function settingsRoutes(deps: AppDeps) {
           videoEncoder: body.videoEncoder ?? saved.videoEncoder,
           clipEncodeSpeed: body.clipEncodeSpeed ?? saved.clipEncodeSpeed,
           renderPriority: body.renderPriority ?? saved.renderPriority,
+          videoRenderConcurrency: body.videoRenderConcurrency ?? saved.videoRenderConcurrency,
         });
         if (!result.ok) {
           return problem(c, {

@@ -159,7 +159,12 @@ describe("renderMachine", () => {
 
   it("encodes on the processor with the chosen clip speed and priority", async () => {
     const result = await renderMachine({
-      settings: { videoEncoder: "cpu", clipEncodeSpeed: "fast", renderPriority: "normal" },
+      settings: {
+        videoEncoder: "cpu",
+        clipEncodeSpeed: "fast",
+        renderPriority: "normal",
+        videoRenderConcurrency: 1,
+      },
       nvenc: missing,
       log: log(),
     });
@@ -174,6 +179,7 @@ describe("renderMachine", () => {
         videoEncoder: "nvidia",
         clipEncodeSpeed: "thorough",
         renderPriority: "background",
+        videoRenderConcurrency: 1,
       },
       nvenc: available,
       log: log(),
@@ -193,6 +199,7 @@ describe("renderMachine", () => {
         videoEncoder: "nvidia",
         clipEncodeSpeed: "thorough",
         renderPriority: "background",
+        videoRenderConcurrency: 1,
       },
       nvenc: missing,
       log: logged,

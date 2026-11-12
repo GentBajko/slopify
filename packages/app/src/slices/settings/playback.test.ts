@@ -15,6 +15,7 @@ const renderDefaults = {
   videoEncoder: "cpu",
   clipEncodeSpeed: "thorough",
   renderPriority: "background",
+  videoRenderConcurrency: 1,
 } as const;
 
 interface Harness {
@@ -160,7 +161,7 @@ describe("saveSettings", () => {
       subtitleModel: "fp32",
       ...renderDefaults,
     });
-    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 7 });
+    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 8 });
   });
 
   it("refuses a negative gap", () => {

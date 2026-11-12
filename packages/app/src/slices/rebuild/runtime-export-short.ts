@@ -9,6 +9,7 @@ import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/asse
 import { projectDir } from "../storage/layout.js";
 import type { AudioSegment } from "../video/edit-list.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
+import { openRenderGate } from "../video/render-gate.js";
 import {
   type ExportExecutionDeps,
   exportMachine,
@@ -48,34 +49,37 @@ export async function executeShortExport(
   const relativePath = (path: string): string => relative(directory, path).split(sep).join("/");
   try {
     const machine = await exportMachine(deps, context.work.projectId);
-    const master = await renderShort({
-      bin: deps.ffmpeg,
-      machine: machine.machine,
-      notice: machine.notice,
-      master: masterGoal(config, "video"),
-      timeline,
-      start: 0,
-      end: seconds,
-      images,
-      imageSeconds: config.imageSeconds,
-      motionStyle: config.motionStyle,
-      zoomPercent: config.zoomPercent,
-      words,
-      font,
-      title: config.title,
-      output: pending.absolutePath,
-      scratch: directory,
-      signal: context.signal,
-      log: deps.log,
-      onProgress: (elapsedMs) =>
-        context.emit({
-          type: "stage.progress",
-          projectId: context.work.projectId,
-          stage: "video",
-          current: Math.min(100, Math.round(elapsedMs / (seconds * 10))),
-          total: 100,
-        }),
-    });
+    // A short is a render like any other, so it waits in the same queue as the long video.
+    const master = await (deps.renderGate ?? openRenderGate).hold(() =>
+      renderShort({
+        bin: deps.ffmpeg,
+        machine: machine.machine,
+        notice: machine.notice,
+        master: masterGoal(config, "video"),
+        timeline,
+        start: 0,
+        end: seconds,
+        images,
+        imageSeconds: config.imageSeconds,
+        motionStyle: config.motionStyle,
+        zoomPercent: config.zoomPercent,
+        words,
+        font,
+        title: config.title,
+        output: pending.absolutePath,
+        scratch: directory,
+        signal: context.signal,
+        log: deps.log,
+        onProgress: (elapsedMs) =>
+          context.emit({
+            type: "stage.progress",
+            projectId: context.work.projectId,
+            stage: "video",
+            current: Math.min(100, Math.round(elapsedMs / (seconds * 10))),
+            total: 100,
+          }),
+      }),
+    );
     context.signal.throwIfAborted();
     const durationMs = await probeDurationMs(
       deps.ffmpeg,

@@ -14,10 +14,17 @@ export type ClipEncodeSpeed = (typeof clipEncodeSpeeds)[number];
 export const renderPriorities = ["normal", "background"] as const;
 export type RenderPriority = (typeof renderPriorities)[number];
 
+// How many videos this computer renders at once. A render reads the whole picture track and
+// encodes hours of it, so two at once cost more than twice one: they share the processor, the
+// disk and the memory, and a long enough pair can leave the app with nothing to answer the
+// page with. One at a time is the default; the rest wait their turn rather than being refused.
+export const videoRenderConcurrencyMax = 4;
+
 export interface RenderSettings {
   readonly videoEncoder: VideoEncoder;
   readonly clipEncodeSpeed: ClipEncodeSpeed;
   readonly renderPriority: RenderPriority;
+  readonly videoRenderConcurrency: number;
 }
 
 // What one render encodes with. NVENC runs in its own ffmpeg (`bin`), since the bundled one

@@ -17,6 +17,7 @@ import { withPaths } from "../video/edit-list.js";
 import type { RenderMachine } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
+import { openRenderGate, type RenderGate } from "../video/render-gate.js";
 import { renderSlideshow } from "../video/slideshow.js";
 import { writePortraits } from "../voices/portraits.js";
 import { linesLevelled } from "./recipe-lines.js";
@@ -43,6 +44,9 @@ export interface ExportExecutionDeps extends LocalExecutionDeps {
         projectId: string,
       ) => Promise<{ readonly machine: RenderMachine; readonly notice?: string | undefined }>)
     | undefined;
+  // Settings → Production defaults → Videos rendered at once (`video/render-gate.ts`): the
+  // picture render waits in it. Absent renders as before, with nothing held back.
+  readonly renderGate?: RenderGate | undefined;
 }
 
 // The machine settings for one render, and the notices it gathers for the project page.
@@ -234,23 +238,28 @@ export async function executeExportRecipe(
           rmSync(`${pending.absolutePath}.master.wav`, { force: true });
         }
       }
-    } else
-      master = await renderSlideshow({
-        bin: deps.ffmpeg,
-        edit: plan.editList,
-        output: plan.output,
-        burnSubtitles: burn,
-        cwd: directory,
-        ...(portraits === undefined ? {} : { portraits: portraits.overlays }),
-        scratch: projectDirectory,
-        cache: renderCacheDir(deps.paths, context.work.projectId),
-        signal: context.signal,
-        log: deps.log,
-        onProgress,
-        ...(goal === undefined ? {} : { master: goal }),
-        machine: machine.machine,
-        notice: machine.notice,
-      });
+    }
+    // The picture render waits its turn. The audio export above does not: it is neither long
+    // enough nor heavy enough to be worth holding a place for.
+    else
+      master = await (deps.renderGate ?? openRenderGate).hold(() =>
+        renderSlideshow({
+          bin: deps.ffmpeg,
+          edit: plan.editList,
+          output: plan.output,
+          burnSubtitles: burn,
+          cwd: directory,
+          ...(portraits === undefined ? {} : { portraits: portraits.overlays }),
+          scratch: projectDirectory,
+          cache: renderCacheDir(deps.paths, context.work.projectId),
+          signal: context.signal,
+          log: deps.log,
+          onProgress,
+          ...(goal === undefined ? {} : { master: goal }),
+          machine: machine.machine,
+          notice: machine.notice,
+        }),
+      );
     context.signal.throwIfAborted();
     const asset = sealAsset(deps, pending);
     prepared.push(
