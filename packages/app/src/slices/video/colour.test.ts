@@ -100,7 +100,7 @@ function render(
       edit,
       { kind: "shot", shot: 0, from: 0, count: shot.frames, start: 0 },
       output,
-      false,
+      "watched",
       "cards.ass",
       encode,
     ),

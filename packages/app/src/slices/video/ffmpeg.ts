@@ -58,7 +58,8 @@ export function resolveFfmpeg(
 // lines stay a few hundred characters (Windows allows 32,767) because the timeline lives
 // in the list, not the arguments; and a still that comes round with the same motion is not
 // rendered a second time. The clips are identical encodes, so without burned-in captions the
-// join copies them rather than encoding again.
+// join copies them rather than encoding again; and where most stills are shown once, each clip
+// draws its own captions and the join copies those too (`clip-captions.ts`).
 //
 // A transition is one more clip in the list (`transitions.ts`), and the Look is filters on
 // each clip (`look.ts`), so neither changes how the render runs: still one clip per run,
@@ -145,12 +146,17 @@ type Frame = Pick<EditList, "width" | "height" | "fps"> & {
 };
 
 // A whole shot as one clip.
-export function clipArgs(frame: Frame, shot: Shot, output: string, intermediate = false): string[] {
+export function clipArgs(
+  frame: Frame,
+  shot: Shot,
+  output: string,
+  use: ClipUse = "watched",
+): string[] {
   return segmentArgs(
     { ...frame, shots: [shot] },
     { kind: "shot", shot: 0, from: 0, count: shot.frames, start: 0 },
     output,
-    intermediate,
+    use,
   );
 }
 
@@ -159,7 +165,7 @@ export function segmentArgs(
   edit: Frame & Pick<EditList, "shots"> & Partial<Pick<EditList, "look" | "cards">>,
   segment: Segment,
   output: string,
-  intermediate = false,
+  use: ClipUse = "watched",
   // The clip's own chapter-card script, beside it in the working folder (`cards.ts`).
   cardsFile = "cards.ass",
   // Settings → Production defaults → Rendering (`encoding.ts`).
@@ -181,8 +187,10 @@ export function segmentArgs(
     inputs.push(...built.inputs);
     chains.push(built.chain);
   };
-  // The last filter's output label, with the frames' colour tags set on the way out.
-  const tagged = `,${bt709Frames}[v]`;
+  const own = typeof use === "string" ? undefined : use;
+  // The last filter's output label, with the frames' colour tags set on the way out; a clip
+  // with its own captions hands its picture to them first.
+  const tagged = own === undefined ? `,${bt709Frames}[v]` : "[c]";
   const look = lookChain(edit, segment.start, segment.count, "[p]", tagged, cardsFile);
   const picked = look === undefined ? tagged : "[p]";
   if (segment.kind === "shot") picture(edit.shots[segment.shot], segment.from, picked);
@@ -198,6 +206,16 @@ export function segmentArgs(
     );
   }
   if (look !== undefined) chains.push(look);
+  if (own !== undefined)
+    chains.push(
+      ...burnIn(inputs, own.portraits ?? [], {
+        from: "[c]",
+        // Drawn on the pixels the encoder is given, as captions over decoded clips are.
+        before: "format=yuv420p,",
+        script: own.script,
+        fonts: own.fonts,
+      }),
+    );
   return [
     ...progressArgs,
     ...inputs,
@@ -209,7 +227,11 @@ export function segmentArgs(
     ...(segment.kind === "shot" && segment.from === 0 && look === undefined
       ? []
       : ["-frames:v", String(segment.count)]),
-    ...codecArgs(encode, intermediate ? "intermediate" : "final", edit.look),
+    ...codecArgs(
+      encode,
+      own !== undefined ? "captioned" : use === "recaptioned" ? "intermediate" : "final",
+      edit.look,
+    ),
     "-an",
     output,
   ];
@@ -343,6 +365,19 @@ export interface PortraitOverlay {
   readonly size: number;
 }
 
+// What becomes of a clip's picture: watched as it is, joined to the others by copying;
+// decoded again under captions burned over the joined clips; or given its own captions by its
+// own run and then watched, so its frames are encoded once (`slideshow.ts` picks).
+export type ClipUse = "watched" | "recaptioned" | ClipCaptions;
+
+export interface ClipCaptions {
+  // The clip's own caption script (`clip-captions.ts`) and the folder of its fonts, both
+  // beside the clip in the working folder.
+  readonly script: string;
+  readonly fonts: string;
+  readonly portraits?: readonly PortraitOverlay[] | undefined;
+}
+
 // The video's sound: the narration's segments and silences joined, with the ambient bed under
 // them when there is one, as the inputs from `first` on and the chains ending in `[a]`.
 function audioMix(
@@ -471,7 +506,7 @@ export function burnPartArgs(
           // back to 25 fps and drops frames.
           after: `,setpts=PTS-STARTPTS,fps=${String(edit.fps)}`,
         };
-  const chains = burnIn(inputs, portraits, shifted.before, shifted.after);
+  const chains = burnIn(inputs, portraits, shifted);
   return [
     ...progressArgs,
     ...inputs,
@@ -492,11 +527,18 @@ export function burnPartArgs(
 function burnIn(
   inputs: string[],
   portraits: readonly PortraitOverlay[],
-  before = "",
-  after = "",
+  draw: {
+    // The picture the captions go on; the first input's when left out.
+    readonly from?: string;
+    readonly before?: string;
+    readonly after?: string;
+    // The caption script and its fonts' folder; the whole video's when left out.
+    readonly script?: string;
+    readonly fonts?: string;
+  } = {},
 ): string[] {
   let first = inputs.filter((value) => value === "-i").length;
-  let source = "[0:v]";
+  let source = draw.from ?? "[0:v]";
   const video: string[] = [];
   portraits.forEach((portrait, at) => {
     inputs.push("-i", portrait.path);
@@ -509,7 +551,7 @@ function burnIn(
     first += 1;
   });
   video.push(
-    `${source}${before}ass=filename=subtitles.ass:fontsdir=fonts${after},${bt709Frames}[v]`,
+    `${source}${draw.before ?? ""}ass=filename=${draw.script ?? "subtitles.ass"}:fontsdir=${draw.fonts ?? "fonts"}${draw.after ?? ""},${bt709Frames}[v]`,
   );
   return video;
 }

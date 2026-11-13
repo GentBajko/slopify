@@ -5,6 +5,7 @@ import {
   linkSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   statfsSync,
@@ -15,9 +16,10 @@ import { dirname, join } from "node:path";
 
 // The clips of a project's last render, kept so the next render encodes only the clips that
 // changed. A clip is named by what went into its ffmpeg run: the binary, the arguments with
-// its own output left out, every input file as it is on disk, and its chapter-card script and
-// font. Any change to those is another name, so a clip is never reused for a picture it
-// would not have drawn.
+// its own output left out, every input file as it is on disk, its chapter-card script and
+// font, and, for a clip that draws its own captions, their script, fonts and portraits. Any
+// change to those is another name, so a clip is never reused for a picture it would not have
+// drawn.
 //
 // The folder is one per project under a hidden folder of Projects, the same disk as the
 // render's working folder so a clip is linked, not copied; storage reconcile and backups
@@ -37,12 +39,14 @@ export function cacheKey(
   args: readonly string[],
   output: string,
   extra: readonly string[] = [],
+  // What stands in the key for an argument that is a file written anew for every render.
+  stand: ReadonlyMap<string, string> = new Map(),
 ): string {
   const inputs: string[] = [];
   args.forEach((value, at) => {
-    if (args[at - 1] === "-i") inputs.push(fileIdentity(value));
+    if (args[at - 1] === "-i") inputs.push(stand.get(value) ?? fileIdentity(value));
   });
-  const named = args.map((value) => (value === output ? outputMark : value));
+  const named = args.map((value) => (value === output ? outputMark : (stand.get(value) ?? value)));
   return createHash("sha256")
     .update(JSON.stringify([version, bin, named, inputs, extra]))
     .digest("hex");
@@ -53,6 +57,12 @@ export function cacheKey(
 export function fileIdentity(path: string): string {
   const stat = statSync(path, { throwIfNoEntry: false });
   return stat === undefined ? path : `${path}|${String(stat.size)}|${String(stat.mtimeMs)}`;
+}
+
+// A file as a key part by what it holds: for one that a render writes anew each time, whose
+// path and date would never be the same twice.
+export function contentIdentity(path: string): string {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
 // Puts the cached clip at `target`; false when there is none.

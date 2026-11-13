@@ -85,6 +85,20 @@ describe("codecArgs", () => {
     ]);
   });
 
+  // A clip that draws its own captions is the finished picture and its frames' only encode.
+  it("encodes a clip with its own captions as a finished picture, a step quicker when Fast", () => {
+    const x264 = { kind: "x264", clipSpeed: "thorough" } as const;
+    const fast = { kind: "x264", clipSpeed: "fast" } as const;
+    const nvenc = { kind: "nvenc", bin: "/usr/bin/ffmpeg", clipSpeed: "fast" } as const;
+    expect(codecArgs(x264, "captioned", undefined)).toEqual(codecArgs(x264, "final", undefined));
+    expect(codecArgs(fast, "captioned", undefined)).toEqual([
+      ...codecArgs(x264, "final", undefined),
+      "-preset",
+      "faster",
+    ]);
+    expect(codecArgs(nvenc, "captioned", undefined)).toEqual(codecArgs(nvenc, "final", undefined));
+  });
+
   it("encodes on the NVIDIA card at its highest quality, constant quality per role", () => {
     const nvenc = { kind: "nvenc", bin: "/usr/bin/ffmpeg", clipSpeed: "thorough" } as const;
     const grainy = { grade: "none", atmosphere: "none", vignette: "off", grain: "strong" } as const;

@@ -291,10 +291,72 @@ describe("clipArgs", () => {
   });
 
   it("keeps a clip that will be encoded again closer to the source", () => {
-    expect(clipArgs(plan(), slot, "/w/c1.mp4", true)).toEqual(
+    expect(clipArgs(plan(), slot, "/w/c1.mp4", "recaptioned")).toEqual(
       expect.arrayContaining(["-crf", "16"]),
     );
     expect(clipArgs(plan(), slot, "/w/c1.mp4")).not.toContain("-crf");
+  });
+
+  // Captions burned in by the clip's own run: every frame is encoded once.
+  describe("with its own captions", () => {
+    const own = { script: "c1.said.ass", fonts: "caption-fonts" };
+    const drawn = `[c]format=yuv420p,ass=filename=c1.said.ass:fontsdir=caption-fonts,${tags}[v]`;
+
+    it("draws them last and is the finished picture, encoded once", () => {
+      const args = clipArgs(plan(), slot, "/w/c1.mp4", own);
+      expect(graphOf(args)).toBe(
+        `${graphOf(clipArgs(plan(), slot, "/w/c1.mp4")).slice(0, -`,${tags}[v]`.length)}[c];${drawn}`,
+      );
+      expect(args).not.toContain("-crf");
+      expect(args.slice(args.indexOf("-c:v"))).toEqual(
+        clipArgs(plan(), slot, "/w/c1.mp4").slice(args.indexOf("-c:v")),
+      );
+    });
+
+    it("draws them over a transition, and over the chapter card", () => {
+      const edit = plan({
+        edit: {
+          transition: { kind: "crossfade", seconds: 1 },
+          cards: { chapters: [{ title: "One", start: 0 }], font: { path: "/f.ttf", name: "F" } },
+        },
+      });
+      const { clips } = slideshowClips(edit);
+      const carded = clips.find((clip) => clip.segment.kind === "shot");
+      const crossed = clips.find((clip) => clip.segment.kind === "transition");
+      if (carded === undefined || crossed === undefined) throw new Error("no such clips");
+      const graph = (clip: typeof carded): string =>
+        graphOf(segmentArgs(edit, clip.segment, "/w/c.mp4", own, "c1.ass"));
+      expect(graph(carded)).toContain("ass=filename=c1.ass:fontsdir=fonts[c];");
+      expect(graph(carded).endsWith(drawn)).toBe(true);
+      expect(graph(crossed)).toMatch(/xfade=[^;]*\[c\];/);
+      expect(graph(crossed).endsWith(drawn)).toBe(true);
+    });
+
+    it("lays the speaker panel's portraits under them, after the clip's own inputs", () => {
+      const args = clipArgs(plan(), slot, "/w/c1.mp4", {
+        ...own,
+        portraits: [
+          { path: "/s/portrait-0.jpg", x: 10, y: 20, size: 119 },
+          { path: "/s/portrait-2.png", x: 300, y: 20, size: 119 },
+        ],
+      });
+      expect(args.filter((_arg, at) => args[at - 1] === "-i")).toEqual([
+        "/p/images/001.png",
+        "/s/portrait-0.jpg",
+        "/s/portrait-2.png",
+      ]);
+      const graph = graphOf(args);
+      expect(graph).toContain(
+        "[1:v]scale=119:119:force_original_aspect_ratio=increase:out_color_matrix=bt709:out_range=tv,crop=119:119,setsar=1[pic0]",
+      );
+      expect(graph).toContain("[c][pic0]overlay=x=10:y=20:eof_action=repeat[panel0]");
+      expect(graph).toContain("[panel0][pic1]overlay=x=300:y=20:eof_action=repeat[panel1]");
+      expect(
+        graph.endsWith(
+          `[panel1]format=yuv420p,ass=filename=c1.said.ass:fontsdir=caption-fonts,${tags}[v]`,
+        ),
+      ).toBe(true);
+    });
   });
 
   it("asks ffmpeg for machine-readable progress on stdout", () => {
@@ -462,21 +524,31 @@ describe("the chosen encoder", () => {
   const shot = { kind: "shot", shot: 0, from: 0, count: 150, start: 0 } as const;
 
   it("encodes a clip with NVENC, at the intermediate quality under burned-in captions", () => {
-    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", true, "cards.ass", nvenc);
+    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", "recaptioned", "cards.ass", nvenc);
     expect(after(clip, "-c:v")).toBe("h264_nvenc");
     expect(after(clip, "-cq")).toBe("20");
     expect(clip).not.toContain("-crf");
-    expect(after(segmentArgs(plan(), shot, "/w/c1.mp4", false, "cards.ass", nvenc), "-cq")).toBe(
-      "28.5",
-    );
+    expect(
+      after(segmentArgs(plan(), shot, "/w/c1.mp4", "watched", "cards.ass", nvenc), "-cq"),
+    ).toBe("28.5");
   });
 
   it("encodes an intermediate clip with x264 veryfast when clip encoding is Fast", () => {
-    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", true, "cards.ass", fast);
+    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", "recaptioned", "cards.ass", fast);
     expect(after(clip, "-preset")).toBe("veryfast");
     expect(after(clip, "-crf")).toBe("16");
-    expect(segmentArgs(plan(), shot, "/w/c1.mp4", false, "cards.ass", fast)).toEqual(
-      segmentArgs(plan(), shot, "/w/c1.mp4", false),
+    expect(segmentArgs(plan(), shot, "/w/c1.mp4", "watched", "cards.ass", fast)).toEqual(
+      segmentArgs(plan(), shot, "/w/c1.mp4"),
+    );
+  });
+
+  it("encodes a clip with its own captions a step quicker when clip encoding is Fast", () => {
+    const own = { script: "c1.said.ass", fonts: "caption-fonts" };
+    const clip = segmentArgs(plan(), shot, "/w/c1.mp4", own, "cards.ass", fast);
+    expect(after(clip, "-preset")).toBe("faster");
+    expect(clip).not.toContain("-crf");
+    expect(after(segmentArgs(plan(), shot, "/w/c1.mp4", own, "cards.ass", nvenc), "-cq")).toBe(
+      "28.5",
     );
   });
 

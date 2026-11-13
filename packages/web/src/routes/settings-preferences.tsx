@@ -337,7 +337,7 @@ function RenderSettings({
 
 // measured on a real project (docs/capstone/changelog.d/2026-10-13-render-settings.md).
 const clipEncodingHelp =
-  "Fast uses about half the processor time for the clips under burned-in captions, for a slightly softer picture.";
+  "Fast makes a video with burned-in captions in about a sixth less time, for a slightly softer picture.";
 
 // Settings → General: how Slopify looks, beside how it starts.
 export function AppearanceSetting(): ReactElement {

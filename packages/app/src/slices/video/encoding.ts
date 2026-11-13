@@ -53,11 +53,19 @@ const intermediateCrf = "16";
 // that gap at that size).
 export const nvencQuality = { intermediate: 20, final: 28.5 } as const;
 
+// measured on the first 24 shots of a real project, each still shown once (11.5 minutes, 32
+// threads, changelog.d/2026-11-13-one-encode.md): clips that draw their own captions took
+// 83 s at x264's default preset and 69 s at `faster`, for 1.2 VMAF less. That is the step
+// Fast already was for clips encoded twice (118 s against 145 s, 0.7 VMAF less). `veryfast`
+// cost 4.3 VMAF.
+const captionedFastPreset = "faster";
+
 // `final` is a picture someone watches (a clip joined by copying, a burned-in part, the join);
-// `intermediate` is a clip decoded again under burned-in captions.
+// `intermediate` is a clip decoded again under burned-in captions; `captioned` is a clip that
+// draws its own captions, watched as it is.
 export function codecArgs(
   encode: VideoEncode,
-  role: "intermediate" | "final",
+  role: "intermediate" | "final" | "captioned",
   look: Look | undefined,
 ): string[] {
   if (encode.kind === "nvenc")
@@ -73,7 +81,7 @@ export function codecArgs(
       "-rc",
       "vbr",
       "-cq",
-      String(nvencQuality[role]),
+      String(nvencQuality[role === "intermediate" ? "intermediate" : "final"]),
       "-b:v",
       "0",
       // x264's own keyframe interval, so a clip opens on its one keyframe as x264's do and the
@@ -84,6 +92,7 @@ export function codecArgs(
       "yuv420p",
       ...bt709Tags,
     ];
+  const fast = encode.clipSpeed === "fast";
   return [
     "-c:v",
     "libx264",
@@ -92,8 +101,10 @@ export function codecArgs(
     ...bt709Tags,
     ...lookEncoding(look),
     ...(role === "intermediate"
-      ? [...(encode.clipSpeed === "fast" ? ["-preset", "veryfast"] : []), "-crf", intermediateCrf]
-      : []),
+      ? [...(fast ? ["-preset", "veryfast"] : []), "-crf", intermediateCrf]
+      : role === "captioned" && fast
+        ? ["-preset", captionedFastPreset]
+        : []),
   ];
 }
 

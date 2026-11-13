@@ -1,11 +1,35 @@
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { extname, join, resolve } from "node:path";
 import { errorText, internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { type LoudnessGoal, masterFile, masterReport } from "../loudness/loudnorm.js";
 import type { MasterReport } from "../loudness/model.js";
 import { cardsAss } from "./cards.js";
-import { cacheKey, fileIdentity, keepClip, pruneClips, reuseClip } from "./clip-cache.js";
+import {
+  cacheKey,
+  contentIdentity,
+  fileIdentity,
+  keepClip,
+  pruneClips,
+  reuseClip,
+} from "./clip-cache.js";
+import {
+  type Captions,
+  captionedClips,
+  drawsOwnCaptions,
+  type MadeClip,
+  readCaptions,
+} from "./clip-captions.js";
 import type { EditList } from "./edit-list.js";
 import {
   defaultEncode,
@@ -28,8 +52,10 @@ import { cardsIn } from "./look.js";
 import { inPool, renderJobs } from "./pool.js";
 import { stillSizes } from "./still-sizes.js";
 
-// The two steps `ffmpeg.ts` explains: the distinct clips into a working directory beside the
-// project's files, several at a time, then the join into the output.
+// The two steps `ffmpeg.ts` explains: the clips into a working directory beside the project's
+// files, several at a time, then the join into the output. Burned-in captions are drawn by
+// the clips themselves where that is the cheaper way, and over the joined clips, in a second
+// encode, where it is not (`clip-captions.ts`).
 export interface SlideshowRun {
   readonly bin: string;
   // The renderer's only brief: it plays this list and knows nothing of the project.
@@ -63,6 +89,9 @@ export interface SlideshowRun {
 const clipWeight = 4;
 const copyWeight = 0.05;
 
+// The caption fonts beside the clips, apart from the chapter cards' `fonts`.
+const captionFonts = "caption-fonts";
+
 // floor: a burned-in part shorter than a minute is not worth its own run.
 const leastPartFrames = 60 * 30;
 
@@ -95,7 +124,21 @@ async function renderWith(
   const priority = run.machine?.priority;
   // The ffmpeg that encodes the picture; copying, sound and probing stay with the bundled one.
   const encoder = encode.kind === "nvenc" ? encode.bin : run.bin;
-  const { clips, order } = slideshowClips(edit);
+  const distinct = slideshowClips(edit);
+  // Captions are burned in one of two ways (`clip-captions.ts`): drawn by each clip's own run,
+  // or over the joined clips in a second encode.
+  const own =
+    run.burnSubtitles && drawsOwnCaptions(distinct.clips, distinct.order)
+      ? ownCaptions(run, edit.fps)
+      : undefined;
+  const twice = run.burnSubtitles && own === undefined;
+  const {
+    clips,
+    order,
+  }: { readonly clips: readonly MadeClip[]; readonly order: readonly string[] } =
+    own === undefined
+      ? { clips: distinct.clips.map((clip) => ({ name: clip.name, clip })), order: distinct.order }
+      : captionedClips(distinct.clips, distinct.order, own.captions, edit.fps);
   const sized = { ...edit, stills: stillSizes(edit.shots, run.log) };
   const msOf = (frames: number): number => (frames / edit.fps) * 1000;
   const joinMs = msOf(edit.shots.reduce((sum, shot) => sum + shot.frames, 0));
@@ -104,12 +147,12 @@ async function renderWith(
     joinMs,
     edit.audio.reduce((sum, segment) => sum + segment.seconds * 1000, 0),
   );
-  const clipMs = clips.reduce((sum, clip) => sum + msOf(clip.frames), 0);
+  const clipMs = clips.reduce((sum, one) => sum + msOf(one.clip.frames), 0);
   const jobs = run.jobs ?? renderJobs();
-  const parts = run.burnSubtitles ? burnParts(order, clips, jobs) : [];
+  const parts = twice ? burnParts(order, distinct.clips, jobs) : [];
   const work =
     clipMs * clipWeight +
-    joinMs * (run.burnSubtitles ? 1 : copyWeight) +
+    joinMs * (twice ? 1 : copyWeight) +
     (parts.length > 1 ? joinMs * copyWeight : 0);
   const report = (done: number): void => {
     run.onProgress(work > 0 ? Math.round((Math.min(done, work) / work) * totalMs) : 0);
@@ -130,6 +173,8 @@ async function renderWith(
       mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
       copyFileSync(font.path, join(workspace, "fonts", `card${extname(font.path)}`));
     }
+    // And so are a clip's own captions, with their fonts and the speaker portraits.
+    const drawn = own === undefined ? undefined : captionFiles(own, run.portraits, workspace);
     // The sound is mixed, levelled and encoded while the picture renders, on its own run; the
     // join then only copies it in. Either failing stops the other, and the first failure is
     // the one reported.
@@ -160,16 +205,31 @@ async function renderWith(
       const tell = (): void => {
         report(rendered + [...running.values()].reduce((sum, one) => sum + one, 0));
       };
-      await inPool(clips, jobs, halt, async (clip, signal) => {
-        const script = clip.name.replace(/\.mp4$/, ".ass");
+      await inPool(clips, jobs, halt, async (made, signal) => {
+        const { clip } = made;
+        const script = made.name.replace(/\.mp4$/, ".ass");
         const shown = cardsIn(cards, clip.segment.start, clip.segment.count);
-        const drawn =
+        const carded =
           shown.length > 0 && font !== undefined
             ? cardsAss(edit, shown, font.name, clip.segment.start, edit.cardColor)
             : undefined;
-        if (drawn !== undefined) writeFileSync(join(workspace, script), drawn, { mode: 0o600 });
-        const output = join(workspace, clip.name);
-        const args = segmentArgs(sized, clip.segment, output, run.burnSubtitles, script, encode);
+        if (carded !== undefined) writeFileSync(join(workspace, script), carded, { mode: 0o600 });
+        const spoken = made.name.replace(/\.mp4$/, ".said.ass");
+        const said = drawn === undefined ? undefined : made.said;
+        if (said !== undefined) writeFileSync(join(workspace, spoken), said, { mode: 0o600 });
+        const output = join(workspace, made.name);
+        const args = segmentArgs(
+          sized,
+          clip.segment,
+          output,
+          drawn !== undefined && said !== undefined
+            ? { script: spoken, fonts: drawn.fonts, portraits: drawn.portraits }
+            : twice
+              ? "recaptioned"
+              : "watched",
+          script,
+          encode,
+        );
         const weight = msOf(clip.frames) * clipWeight;
         const cache = run.cache;
         let key: string | undefined;
@@ -179,11 +239,21 @@ async function renderWith(
           if (cache !== undefined) {
             key = cacheKey(
               encoder,
-              args.map((value) =>
-                drawn === undefined ? value : value.replaceAll(script, "\u0000cards"),
-              ),
+              // The scripts are named after the clip's place in this render; what they say
+              // is in the key instead.
+              args.map((value) => {
+                const unsaid =
+                  said === undefined ? value : value.replaceAll(spoken, "\u0000captions");
+                return carded === undefined ? unsaid : unsaid.replaceAll(script, "\u0000cards");
+              }),
               output,
-              drawn === undefined || font === undefined ? [] : [drawn, fileIdentity(font.path)],
+              [
+                ...(carded === undefined || font === undefined
+                  ? []
+                  : [carded, fileIdentity(font.path)]),
+                ...(drawn === undefined || said === undefined ? [] : [said, ...drawn.identity()]),
+              ],
+              drawn?.stand(),
             );
             keys.add(key);
             if (reuseClip(cache, key, output)) {
@@ -198,17 +268,17 @@ async function renderWith(
         }
         await runFfmpeg({
           bin: encoder,
-          ...(cards.length > 0 ? { cwd: workspace } : {}),
+          ...(cards.length > 0 || drawn !== undefined ? { cwd: workspace } : {}),
           args,
           signal,
           log: run.log,
           priority,
           onProgress: (elapsedMs) => {
-            running.set(clip.name, Math.min(elapsedMs * clipWeight, weight));
+            running.set(made.name, Math.min(elapsedMs * clipWeight, weight));
             tell();
           },
         });
-        running.delete(clip.name);
+        running.delete(made.name);
         rendered += weight;
         if (cache !== undefined && key !== undefined) {
           try {
@@ -265,7 +335,7 @@ async function renderWith(
     run.signal.removeEventListener("abort", follow);
     if (failed !== undefined) throw failed.error;
     if (played === undefined) throw new Error("the render was canceled");
-    const burnsHere = run.burnSubtitles && parts.length <= 1;
+    const burnsHere = twice && parts.length <= 1;
     await runFfmpeg({
       bin: burnsHere ? encoder : run.bin,
       cwd: run.cwd,
@@ -289,6 +359,67 @@ async function renderWith(
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }
+}
+
+// The whole video's captions, read so each clip can draw its own part of them.
+function ownCaptions(
+  run: SlideshowRun,
+  fps: number,
+): { readonly captions: Captions; readonly folder: string } {
+  const again = "Press Make the video again in the project's Video section";
+  const folder = run.cwd;
+  if (folder === undefined) throw new Error(internalError("the captions have no folder", again));
+  let script: string;
+  try {
+    script = readFileSync(join(folder, "subtitles.ass"), "utf8");
+  } catch (error) {
+    throw new Error(internalError(`the captions could not be read: ${errorText(error)}`, again), {
+      cause: error,
+    });
+  }
+  return { captions: readCaptions(script, fps), folder };
+}
+
+// What the clips draw their own captions with, put beside them: the caption fonts, and the
+// speaker portraits where the caption folder holds them. That folder is written anew for
+// every render, so `identity` and `stand` name the files in a clip's cache key by what they
+// hold rather than by their path and date.
+function captionFiles(
+  own: { readonly folder: string },
+  portraits: readonly PortraitOverlay[] = [],
+  workspace: string,
+): {
+  readonly fonts: string;
+  readonly portraits: readonly PortraitOverlay[];
+  readonly identity: () => readonly string[];
+  readonly stand: () => ReadonlyMap<string, string>;
+} {
+  const from = join(own.folder, "fonts");
+  const to = join(workspace, captionFonts);
+  if (existsSync(from)) cpSync(from, to, { recursive: true });
+  else mkdirSync(to, { mode: 0o700 });
+  const placed = portraits.map((portrait) => ({
+    ...portrait,
+    path: resolve(own.folder, portrait.path),
+  }));
+  let identity: readonly string[] | undefined;
+  let stand: ReadonlyMap<string, string> | undefined;
+  return {
+    fonts: captionFonts,
+    portraits: placed,
+    identity: () => {
+      identity ??= readdirSync(to)
+        .toSorted()
+        .map((name) => `${name}|${contentIdentity(join(to, name))}`);
+      return identity;
+    },
+    stand: () => {
+      stand ??= new Map(
+        placed.map((portrait) => [portrait.path, `portrait:${contentIdentity(portrait.path)}`]),
+      );
+      return stand;
+    },
+  };
 }
 
 // The video's finished sound as AAC in the working folder: the narration, silences and bed

@@ -3033,7 +3033,7 @@ Union of 3 object variants; a field present in only some variants is `Required: 
 | loudness | `LoudnessDefault` | yes |  |
 | subtitleModel | `EnglishSubtitleModel` | yes | accepted: fp32, fp16, int8; default fp32; this computer's English caption-timing model, never part of a fingerprint |
 | videoEncoder | `VideoEncoder` | yes | accepted: cpu, nvidia; default cpu; nvidia falls back to cpu with a notice when NVENC does not work; never part of a fingerprint |
-| clipEncodeSpeed | `ClipEncodeSpeed` | yes | accepted: thorough, fast; default thorough; fast is x264 veryfast for the CRF 16 clips under burned-in captions; never part of a fingerprint |
+| clipEncodeSpeed | `ClipEncodeSpeed` | yes | accepted: thorough, fast; default thorough; fast is x264 faster for a clip that draws its own captions, and veryfast for the CRF 16 clips under captions burned over the joined video; never part of a fingerprint |
 | renderPriority | `RenderPriority` | yes | accepted: normal, background; default background (nice 10 / below-normal for every render ffmpeg); never part of a fingerprint |
 
 ### TutorialSession
