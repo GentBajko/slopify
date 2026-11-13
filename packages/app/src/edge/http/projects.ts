@@ -145,7 +145,11 @@ export function projectRoutes(deps: AppDeps) {
               : "This project no longer exists. Go back to Projects to pick another.",
           });
         }
-        if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
+        // Only a project with no saved version yet needs one adopted: asked of one that has,
+        // adopting builds that whole version and drops it, on the request every live event
+        // and every return to the page repeats.
+        if (deps.catalogue !== undefined && currentRevisionId(deps.db, project.id) === undefined)
+          adoptBaseline(deps, project.id);
         const holds = projectHolds(deps.db, { projectId: project.id });
         const stopped = holds.stopped.has(project.id);
         return c.json({

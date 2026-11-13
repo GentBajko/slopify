@@ -1,5 +1,4 @@
 import { readFileSync, statSync } from "node:fs";
-import { z } from "zod";
 import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
 import { narrationJoinPiecesOfProject, narrationJoinsOfProject } from "./manifest-repo.js";
@@ -19,16 +18,25 @@ export function getRevisionView(
 ): RevisionView | undefined {
   const revision = revisionById(deps.db, projectId, revisionId);
   if (revision === undefined) return undefined;
+  // The project's files are read once and each looked for on disk once: a finished project's
+  // version names over a thousand, and asking for them one at a time was most of this view,
+  // which every page of the project and every step of a run builds.
+  const paths = new Map<string, string>();
+  for (const row of deps.db
+    .prepare("SELECT id,path FROM project_assets WHERE project_id=?")
+    .all(projectId))
+    if (typeof row.id === "string" && typeof row.path === "string") paths.set(row.id, row.path);
+  const onDisk = new Map<string, boolean>();
   const available = (assetId: string): boolean => {
-    const row = deps.db
-      .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
-      .get(projectId, assetId);
-    if (row === undefined) throw new Error(`Revision asset ${assetId} is not registered.`);
-    const path = z.object({ path: z.string() }).parse(row).path;
-    return (
+    const known = onDisk.get(assetId);
+    if (known !== undefined) return known;
+    const path = paths.get(assetId);
+    if (path === undefined) throw new Error(`Revision asset ${assetId} is not registered.`);
+    const found =
       statSync(outputPath(deps.paths, projectId, path), { throwIfNoEntry: false })?.isFile() ===
-      true
-    );
+      true;
+    onDisk.set(assetId, found);
+    return found;
   };
   const outputs = outputsForRevision(deps.db, projectId, revisionId).map((row) => ({
     ...row,
