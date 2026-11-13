@@ -99,6 +99,33 @@ it("keeps every output and every supplied file, and says what it freed", () => {
   expect(keepOutputsOnly(h.deps, "p1")).toEqual({ ok: true, files: 0, bytesFreed: 0 });
 });
 
+// A supplied file is known by its asset's id, wherever a saved version or the project's own
+// settings carry it; an asset nothing names was made by a step and can be made again.
+it("keeps a file that only a version's settings or the project's settings name", () => {
+  const { h, dir } = fixture();
+  const { db } = h.deps;
+  for (const [id, path] of [
+    ["a-bed", "bed.mp3"],
+    ["a-music", "music.mp3"],
+    ["a-loose", "loose.bin"],
+  ] as const) {
+    writeFileSync(join(dir, path), Buffer.alloc(60));
+    db.prepare("INSERT INTO project_assets VALUES (?,'p1',?,60,'t')").run(id, path);
+  }
+  db.exec(
+    `INSERT INTO project_revisions VALUES ('rev2','p1','rev1',NULL,'{"ambientBed":"a-bed"}','{}','{}','t')`,
+  );
+  db.exec("UPDATE projects SET config=json_set(config,'$.shortsMusic','a-music') WHERE id='p1'");
+  expect(projectStorage(h.deps, "p1")).toMatchObject({
+    removableFiles: 3,
+    removableBytes: 700 + 2 + 60,
+  });
+  expect(keepOutputsOnly(h.deps, "p1")).toEqual({ ok: true, files: 3, bytesFreed: 762 });
+  for (const kept of ["bed.mp3", "music.mp3", "reference.png"])
+    expect(existsSync(join(dir, kept)), kept).toBe(true);
+  expect(existsSync(join(dir, "loose.bin"))).toBe(false);
+});
+
 it("never touches a project that is running, waiting or unfinished", () => {
   const { h, dir } = fixture();
   expect(keepOutputsOnly({ ...h.deps, hasInflight: () => true }, "p1")).toEqual({

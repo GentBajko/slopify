@@ -9,6 +9,7 @@ import { notTemplateSample } from "../template-studio/repo.js";
 import { projectSettled } from "./arrange.js";
 import { backupsFolderName, outputPath, projectDir } from "./layout.js";
 import type { OutputRole } from "./model.js";
+import { idsNamedIn } from "./named-ids.js";
 import type { ProjectPlaces } from "./places.js";
 import { pieceFile } from "./reconcile.js";
 
@@ -72,14 +73,16 @@ export function projectStorage(deps: TrimDeps, projectId: string): ProjectStorag
   const files = filesOf(deps.paths, projectId);
   const outputs = outputPaths(deps.db, projectId);
   const sample = bundledSampleProjects(deps.db).has(projectId);
+  // Read once: what may be removed and what History may drop both turn on it.
+  const supplied: ReadonlySet<string> = sample ? new Set() : suppliedPaths(deps.db, projectId);
   const removable: ReadonlySet<string> = sample
     ? new Set()
-    : removablePaths(deps.db, projectId, keptPaths(deps.db, projectId));
+    : removablePaths(deps.db, projectId, new Set([...outputs, ...supplied]));
   let outputsBytes = 0;
   let workingBytes = 0;
   let removableFiles = 0;
   let removableBytes = 0;
-  const history: ReadonlySet<string> = sample ? new Set() : historyPaths(deps, projectId);
+  const history: ReadonlySet<string> = sample ? new Set() : historyPaths(deps, projectId, supplied);
   let historyFiles = 0;
   let historyBytes = 0;
   for (const [path, bytes] of files) {
@@ -108,8 +111,11 @@ export function projectStorage(deps: TrimDeps, projectId: string): ProjectStorag
 // Delete old versions: the files of older versions that arranging moved to History/, by their
 // stored paths. Never a file the user supplied, nor one they put in History themselves. Going
 // back to such a version makes its files again.
-function historyPaths(deps: TrimDeps, projectId: string): ReadonlySet<string> {
-  const supplied = suppliedPaths(deps.db, projectId);
+function historyPaths(
+  deps: TrimDeps,
+  projectId: string,
+  supplied: ReadonlySet<string> = suppliedPaths(deps.db, projectId),
+): ReadonlySet<string> {
   const out = new Set<string>();
   for (const [path, place] of placedFiles(deps.paths, projectId))
     if (place.startsWith("History/") && !supplied.has(path)) out.add(path);
@@ -294,17 +300,29 @@ function keptPaths(db: DatabaseSync, projectId: string): ReadonlySet<string> {
 
 // The files the user supplied: nothing could make them again, so nothing removes them.
 function suppliedPaths(db: DatabaseSync, projectId: string): ReadonlySet<string> {
-  const kept = new Set<string>();
-  for (const path of pathsOf(
+  const kept = pathsOf(
     db
-      .prepare(
-        `SELECT a.path FROM project_assets a WHERE a.project_id=? AND (
-           EXISTS(SELECT 1 FROM project_revisions r WHERE r.project_id=a.project_id
-             AND (instr(r.content,a.id)>0 OR instr(r.config,a.id)>0))
-           OR EXISTS(SELECT 1 FROM projects p WHERE p.id=a.project_id AND instr(p.config,a.id)>0))
-         UNION SELECT path FROM outputs WHERE project_id=? AND original_filename IS NOT NULL`,
-      )
-      .all(projectId, projectId),
+      .prepare("SELECT path FROM outputs WHERE project_id=? AND original_filename IS NOT NULL")
+      .all(projectId),
+  );
+  const assets = db.prepare("SELECT id,path FROM project_assets WHERE project_id=?").all(projectId);
+  const texts: string[] = [];
+  const carry = (value: unknown): void => {
+    if (typeof value === "string") texts.push(value);
+  };
+  for (const row of db
+    .prepare("SELECT content,config FROM project_revisions WHERE project_id=?")
+    .all(projectId)) {
+    carry(row.content);
+    carry(row.config);
+  }
+  carry(db.prepare("SELECT config FROM projects WHERE id=?").get(projectId)?.config);
+  const named = idsNamedIn(
+    assets.flatMap((row) => (typeof row.id === "string" ? [row.id] : [])),
+    texts,
+  );
+  for (const path of pathsOf(
+    assets.filter((row) => typeof row.id === "string" && named.has(row.id)),
   ))
     kept.add(path);
   return kept;
