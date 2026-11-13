@@ -26,6 +26,7 @@ import {
 } from "./ffmpeg.js";
 import { cardsIn } from "./look.js";
 import { inPool, renderJobs } from "./pool.js";
+import { stillSizes } from "./still-sizes.js";
 
 // The two steps `ffmpeg.ts` explains: the distinct clips into a working directory beside the
 // project's files, several at a time, then the join into the output.
@@ -57,7 +58,7 @@ export interface SlideshowRun {
   readonly notice?: ((sentence: string) => void) | undefined;
 }
 
-// estimate: a zoompan frame from a 4x still costs several plain encoded frames, and a
+// estimate: a frame sampled from its still and encoded costs several plain encoded frames, and a
 // copying join is nearly free, so progress is weighted by that rather than by clock time.
 const clipWeight = 4;
 const copyWeight = 0.05;
@@ -95,6 +96,7 @@ async function renderWith(
   // The ffmpeg that encodes the picture; copying, sound and probing stay with the bundled one.
   const encoder = encode.kind === "nvenc" ? encode.bin : run.bin;
   const { clips, order } = slideshowClips(edit);
+  const sized = { ...edit, stills: stillSizes(edit.shots, run.log) };
   const msOf = (frames: number): number => (frames / edit.fps) * 1000;
   const joinMs = msOf(edit.shots.reduce((sum, shot) => sum + shot.frames, 0));
   // Progress is reported against the video's length, the longer of picture and sound.
@@ -167,7 +169,7 @@ async function renderWith(
             : undefined;
         if (drawn !== undefined) writeFileSync(join(workspace, script), drawn, { mode: 0o600 });
         const output = join(workspace, clip.name);
-        const args = segmentArgs(edit, clip.segment, output, run.burnSubtitles, script, encode);
+        const args = segmentArgs(sized, clip.segment, output, run.burnSubtitles, script, encode);
         const weight = msOf(clip.frames) * clipWeight;
         const cache = run.cache;
         let key: string | undefined;

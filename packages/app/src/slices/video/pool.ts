@@ -1,10 +1,11 @@
 import { availableParallelism, totalmem } from "node:os";
 
-// zoompan runs on one core, so a render of one clip at a time leaves most of the machine
-// idle. Measured on 32 cores with ffmpeg 7 and 15-second clips from a 4x still: one at a time
-// 8.1 s a clip, four at once 2.9 s, eight 1.9 s, sixteen 1.6 s. Eight is where the gain
-// flattens, and each run holds about 1.4 GB (a transition, two stills, twice that), so the
-// memory the process may use caps it as well.
+// One clip's run does not fill the machine, so several go at once. Measured on 32 threads
+// with ffmpeg 7, on the first 24 shots of a real project (11.5 minutes of video, captions
+// burned in): one at a time 215 s, two 156 s, four 141 s, eight 141 s, twelve 142 s. The
+// sampler and x264 both use several cores, so past four the machine is simply full, and eight
+// costs nothing more. Each run holds about 1 GB, most of it x264's own frames, so the memory
+// the process may use caps it as well.
 const mostJobs = 8;
 const coresPerJob = 4;
 const bytesPerJob = 3 * 1024 ** 3;

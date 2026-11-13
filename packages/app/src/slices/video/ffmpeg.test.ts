@@ -21,6 +21,9 @@ import {
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
 
+// The colour tags every picture leaves its filtergraph with (`colour.ts`).
+const tags = "setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv";
+
 function plan(over: Partial<PlanInput> = {}): EditList {
   return planRender({
     format: "16:9",
@@ -140,14 +143,48 @@ describe("clipArgs", () => {
   };
   const moving = (motion: Motion, frames = 150): Shot => ({ ...slot, motion, frames });
 
-  it("renders one still through the prescaled zoom into one silent clip", () => {
+  // `perspective`'s corners for a window of `w` by `h` whose top left is at `x`, `y`.
+  const corners = (x: string, y: string, w: string, h: string): string =>
+    `x0='${x}':y0='${y}':x1='${x}+${w}':y1='${y}':x2='${x}':y2='${y}+${h}':x3='${x}+${w}':y3='${y}+${h}'`;
+  const graphOf = (args: readonly string[]): string =>
+    args[args.indexOf("-filter_complex") + 1] ?? "";
+  // The zoom a clip's sampler reads at, and the frames it is made for.
+  const zoomOf = (args: readonly string[]) =>
+    /zoompan=z='1':d=(\d+):.*perspective=x0='\(\d+-\d+\/(.+?)\)[*/]/
+      .exec(graphOf(args))
+      ?.slice(1)
+      .reverse();
+
+  it("renders one still through one sampling pass into one silent clip", () => {
     const args = clipArgs(plan(), slot, "/w/c1.mp4");
     expect(args.filter((_arg, at) => args[at - 1] === "-i")).toEqual(["/p/images/001.png"]);
-    expect(args[args.indexOf("-filter_complex") + 1]).toBe(
+    const z = "(1+0.225*on/149)";
+    // A still whose size is not known is taken for a large one: a base above the whole zoom,
+    // the frame cut from the top left of what the sampler writes.
+    expect(graphOf(args)).toBe(
       "[0:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
-        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
-        "zoompan=z='1+0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
-        "s=1920x1080:fps=30,setsar=1[v]",
+        "scale=2496:1404:force_original_aspect_ratio=increase:flags=lanczos:out_color_matrix=bt709:out_range=tv," +
+        "crop=2496:1404," +
+        "zoompan=z='1':d=150:x='0':y='0':s=2496x1404:fps=30," +
+        `perspective=${corners(`(2496-2496/${z})/2`, `(1404-1404/${z})/2`, `2496/${z}*2496/1920`, `1404/${z}*1404/1080`)}` +
+        ":sense=source:eval=frame:interpolation=cubic," +
+        `crop=1920:1080:0:0,setsar=1,${tags}[v]`,
+    );
+  });
+
+  it("samples a still with no more pixels than the frame from a base under it", () => {
+    const stills = new Map([["/p/images/001.png", { width: 1672, height: 941 }]]);
+    const z = "(1+0.225*on/149)";
+    // The base sits top left of the frame with its edges drawn out, and nothing is cut after.
+    expect(graphOf(clipArgs({ ...plan(), stills }, slot, "/w/c1.mp4"))).toBe(
+      "[0:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
+        "scale=1760:990:force_original_aspect_ratio=increase:flags=lanczos:out_color_matrix=bt709:out_range=tv," +
+        "crop=1760:990," +
+        "pad=1920:1080:0:0,fillborders=right=160:bottom=90:mode=smear," +
+        "zoompan=z='1':d=150:x='0':y='0':s=1920x1080:fps=30," +
+        `perspective=${corners(`(1760-1760/${z})/2`, `(990-990/${z})/2`, `1760/${z}`, `990/${z}`)}` +
+        ":sense=source:eval=frame:interpolation=cubic," +
+        `setsar=1,${tags}[v]`,
     );
   });
 
@@ -155,56 +192,48 @@ describe("clipArgs", () => {
     const { clips } = slideshowClips(
       plan({ body: { path: "/b.mp3", seconds: 40 }, imageSeconds: 15, images: ["/a.png"] }),
     );
-    const zooms = clips.map((clip) =>
-      /zoompan=z='([^']+)':d=(\d+):/
-        .exec(clipArgs(plan(), clip.shot, "/w/c.mp4").join(" "))
-        ?.slice(1),
-    );
     // 450 frames: the zoom reaches 1 + 0.225 on the last frame, on = 449.
-    expect(zooms).toEqual([
-      ["1+0.225*on/449", "450"],
-      ["1.225-0.225*on/449", "450"],
-      ["1+0.225*on/299", "300"],
+    expect(clips.map((clip) => zoomOf(clipArgs(plan(), clip.shot, "/w/c.mp4")))).toEqual([
+      ["(1+0.225*on/449)", "450"],
+      ["(1.225-0.225*on/449)", "450"],
+      ["(1+0.225*on/299)", "300"],
     ]);
   });
 
   it("zooms the project's own range, and not at all at 0%", () => {
     const zoom = (percent: number, direction: "in" | "out") =>
-      /zoompan=z='([^']+)'/.exec(
-        clipArgs(plan(), moving({ kind: "zoom", direction, percent }), "/w/c1.mp4").join(" "),
-      )?.[1];
-    expect(zoom(22.5, "in")).toBe("1+0.225*on/149");
-    expect(zoom(22.5, "out")).toBe("1.225-0.225*on/149");
-    expect(zoom(10, "in")).toBe("1+0.1*on/149");
-    expect(zoom(10, "out")).toBe("1.1-0.1*on/149");
-    expect(zoom(0, "in")).toBe("1");
-    expect(zoom(0, "out")).toBe("1");
-    // Still cover-scaled and cropped, but to the frame itself: nothing to smooth.
-    for (const still of [moving({ kind: "still" }), moving({ ...zoomIn, percent: 0 })])
-      expect(clipArgs(plan(), still, "/w/c1.mp4").join(" ")).toContain(
-        "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080," +
-          "zoompan=z='1':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':",
+      zoomOf(clipArgs(plan(), moving({ kind: "zoom", direction, percent }), "/w/c1.mp4"))?.[0];
+    expect(zoom(22.5, "in")).toBe("(1+0.225*on/149)");
+    expect(zoom(22.5, "out")).toBe("(1.225-0.225*on/149)");
+    expect(zoom(10, "in")).toBe("(1+0.1*on/149)");
+    expect(zoom(10, "out")).toBe("(1.1-0.1*on/149)");
+    // Cover-scaled and cropped to the frame itself and held there: nothing moves, so nothing
+    // is sampled.
+    for (const still of [moving({ kind: "still" }), moving({ ...zoomIn, percent: 0 })]) {
+      const graph = graphOf(clipArgs(plan(), still, "/w/c1.mp4"));
+      expect(graph).toContain(
+        "scale=1920:1080:force_original_aspect_ratio=increase:out_color_matrix=bt709:out_range=tv," +
+          "crop=1920:1080," +
+          "zoompan=z='1':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=30,",
       );
+      expect(graph).not.toContain("perspective");
+    }
   });
 
-  it("zooms out when the shot says so", () => {
-    const args = clipArgs(plan(), moving({ ...zoomIn, direction: "out" }), "/w/c2.mp4");
-    expect(args.join(" ")).toContain("zoompan=z='1.225-0.225*on/149':d=150:");
-  });
-
-  it("pre-scales to four times the frame in either orientation", () => {
-    const graph = clipArgs(plan({ format: "9:16" }), slot, "/w/c1.mp4").join(" ");
-    expect(graph).toContain("scale=4320:7680:force_original_aspect_ratio=increase,crop=4320:7680");
-    expect(graph).toContain("s=1080x1920");
+  it("brings the still to its base in either orientation", () => {
+    const graph = graphOf(clipArgs(plan({ format: "9:16" }), slot, "/w/c1.mp4"));
+    expect(graph).toContain(
+      "scale=1404:2496:force_original_aspect_ratio=increase:flags=lanczos:out_color_matrix=bt709:out_range=tv," +
+        "crop=1404:2496,",
+    );
+    expect(graph).toContain("crop=1080:1920:0:0,");
   });
 
   it("holds the zoom still on a one-frame slot rather than dividing by zero", () => {
-    expect(clipArgs(plan(), { ...slot, frames: 1 }, "/w/c1.mp4").join(" ")).toContain(
-      "zoompan=z='1':d=1:",
-    );
+    expect(zoomOf(clipArgs(plan(), { ...slot, frames: 1 }, "/w/c1.mp4"))).toEqual(["1", "1"]);
     expect(
-      clipArgs(plan(), moving({ ...zoomIn, direction: "out" }, 1), "/w/c1.mp4").join(" "),
-    ).toContain("zoompan=z='1.225':d=1:");
+      zoomOf(clipArgs(plan(), moving({ ...zoomIn, direction: "out" }, 1), "/w/c1.mp4")),
+    ).toEqual(["1.225", "1"]);
   });
 
   describe("a pan", () => {
@@ -214,42 +243,25 @@ describe("clipArgs", () => {
       to: { x: to[0], y: to[1] },
       percent,
     });
-    const graph = (shot: Shot) => {
-      const matched = /zoompan=z='([^']+)':d=\d+:x='([^']+)':y='([^']+)'/.exec(
-        clipArgs(plan(), shot, "/w/c1.mp4").join(" "),
+    // Where the window's top left stands, across and down.
+    const graph = (shot: Shot) =>
+      /perspective=x0='([^']+)':y0='([^']+)'/
+        .exec(graphOf(clipArgs(plan(), shot, "/w/c1.mp4")))
+        ?.slice(1);
+
+    it("holds a fixed zoom and moves the window across the room it leaves", () => {
+      expect(graphOf(clipArgs(plan(), moving(pan([0, 0.5], [1, 0.5])), "/w/c1.mp4"))).toContain(
+        "zoompan=z='1':d=150:x='0':y='0':s=2496x1404:fps=30," +
+          `perspective=${corners(
+            "(2496-2496/1.225)*(0+1*on/149)",
+            "(1404-1404/1.225)*(0.5)",
+            "2496/1.225*2496/1920",
+            "1404/1.225*1404/1080",
+          )}:sense=source:eval=frame:interpolation=cubic,crop=1920:1080:0:0,`,
       );
-      return matched?.slice(1);
-    };
-
-    it("holds a fixed zoom and moves the crop across the room it leaves", () => {
-      expect(graph(moving(pan([0, 0.5], [1, 0.5])))).toEqual([
-        "1.225",
-        "(iw-iw/zoom)*(0+1*on/149)",
-        "(ih-ih/zoom)*(0.5)",
-      ]);
-      expect(graph(moving(pan([1, 0.5], [0, 0.5])))).toEqual([
-        "1.225",
-        "(iw-iw/zoom)*(1-1*on/149)",
-        "(ih-ih/zoom)*(0.5)",
-      ]);
-      expect(graph(moving(pan([0.5, 0], [0.5, 1]), 450))).toEqual([
-        "1.225",
-        "(iw-iw/zoom)*(0.5)",
-        "(ih-ih/zoom)*(0+1*on/449)",
-      ]);
       expect(graph(moving(pan([0.5, 1], [0.5, 0], 10)))).toEqual([
-        "1.1",
-        "(iw-iw/zoom)*(0.5)",
-        "(ih-ih/zoom)*(1-1*on/149)",
-      ]);
-    });
-
-    it("writes every share as exact decimal text, never float noise", () => {
-      // 0.3 - 0.1 is 0.19999999999999998 in binary floating point.
-      expect(graph(moving(pan([0.1, 0.7], [0.3, 0.2], 12.5)))).toEqual([
-        "1.125",
-        "(iw-iw/zoom)*(0.1+0.2*on/149)",
-        "(ih-ih/zoom)*(0.7-0.5*on/149)",
+        "(2240-2240/1.1)*(0.5)",
+        "(1260-1260/1.1)*(1-1*on/149)",
       ]);
     });
 
@@ -258,7 +270,7 @@ describe("clipArgs", () => {
       const ends = (axis: string): number[] => {
         // At on = span, `by*on/span` is `by` itself.
         const [, start = "", sign = "+", by = "0"] =
-          /^\((?:iw-iw|ih-ih)\/zoom\)\*\(([\d.]+)(?:([+-])([\d.]+)\*on\/\d+)?\)$/.exec(axis) ?? [];
+          /^\(\d+-\d+\/[\d.]+\)\*\(([\d.]+)(?:([+-])([\d.]+)\*on\/\d+)?\)$/.exec(axis) ?? [];
         return [Number(start), Number(start) + (sign === "-" ? -1 : 1) * Number(by)];
       };
       const shots = plan({
@@ -268,26 +280,13 @@ describe("clipArgs", () => {
       }).shots;
       expect(shots).toHaveLength(8);
       for (const shot of shots) {
-        const [, x = "", y = ""] = graph(shot) ?? [];
-        for (const end of [...ends(x), ...ends(y)]) {
+        const [x, y] = graph(shot) ?? [];
+        expect(x).toBeDefined();
+        for (const end of [...ends(x ?? ""), ...ends(y ?? "")]) {
           expect(end).toBeGreaterThanOrEqual(0);
           expect(end).toBeLessThanOrEqual(1);
         }
       }
-    });
-
-    it("holds where it starts on a one-frame shot", () => {
-      expect(graph(moving(pan([0, 0.5], [1, 0.5]), 1))).toEqual([
-        "1.225",
-        "(iw-iw/zoom)*(0)",
-        "(ih-ih/zoom)*(0.5)",
-      ]);
-    });
-
-    it("is prescaled like a zoom, for quarter-pixel steps", () => {
-      expect(clipArgs(plan(), moving(pan([0, 0.5], [1, 0.5])), "/w/c1.mp4").join(" ")).toContain(
-        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320,",
-      );
     });
   });
 
@@ -372,7 +371,7 @@ describe("joinArgs", () => {
   it("burns captions in and encodes the video again when asked", () => {
     const args = joinArgs(plan(), "/p/video.mp4", "/w/l", true);
     expect(args[args.indexOf("-filter_complex") + 1]).toMatch(
-      /^\[0:v\]ass=filename=subtitles\.ass:fontsdir=fonts\[v\];/,
+      /^\[0:v\]ass=filename=subtitles\.ass:fontsdir=fonts,setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv\[v\];/,
     );
     expect(args).toEqual(expect.arrayContaining(["-map", "[v]", "-c:v", "libx264"]));
     expect(args).not.toContain("copy");
@@ -391,11 +390,11 @@ describe("joinArgs", () => {
     const first = inputs.length - 2;
     const graph = args[args.indexOf("-filter_complex") + 1] ?? "";
     expect(graph).toContain(
-      `[${String(first)}:v]scale=119:119:force_original_aspect_ratio=increase,crop=119:119,setsar=1[pic0]`,
+      `[${String(first)}:v]scale=119:119:force_original_aspect_ratio=increase:out_color_matrix=bt709:out_range=tv,crop=119:119,setsar=1[pic0]`,
     );
     expect(graph).toContain("[0:v][pic0]overlay=x=10:y=20:eof_action=repeat[panel0]");
     expect(graph).toContain("[panel0][pic1]overlay=x=300:y=20:eof_action=repeat[panel1]");
-    expect(graph).toContain("[panel1]ass=filename=subtitles.ass:fontsdir=fonts[v]");
+    expect(graph).toContain(`[panel1]ass=filename=subtitles.ass:fontsdir=fonts,${tags}[v]`);
     // Without burned-in captions there is no panel to fill.
     expect(
       joinArgs(plan(), "/p/video.mp4", "/w/l", false, [
@@ -423,7 +422,7 @@ describe("joinArgs", () => {
     ]);
     const burned = joinArgs(plan(), "/p/video.mp4", "/w/l", true, [], "/w/sound.m4a");
     expect(burned[burned.indexOf("-filter_complex") + 1]).toBe(
-      "[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]",
+      `[0:v]ass=filename=subtitles.ass:fontsdir=fonts,${tags}[v]`,
     );
   });
 
@@ -497,7 +496,7 @@ describe("burnPartArgs", () => {
   it("moves the part's frames to their place in the video for the captions, then back", () => {
     const args = burnPartArgs(plan(), "/w/p2.ffconcat", "/w/p2.mp4", 5400);
     expect(args[args.indexOf("-filter_complex") + 1]).toBe(
-      "[0:v]setpts=PTS+5400/(30*TB),ass=filename=subtitles.ass:fontsdir=fonts,setpts=PTS-STARTPTS,fps=30[v]",
+      `[0:v]setpts=PTS+5400/(30*TB),ass=filename=subtitles.ass:fontsdir=fonts,setpts=PTS-STARTPTS,fps=30,${tags}[v]`,
     );
     expect(args.slice(-8)).toEqual(
       ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", "/w/p2.mp4"].length === 6
@@ -513,12 +512,12 @@ describe("burnPartArgs", () => {
     const graph = (args: readonly string[]): string =>
       args[args.indexOf("-filter_complex") + 1] ?? "";
     expect(graph(burnPartArgs(plan(), "/w/p1.ffconcat", "/w/p1.mp4", 0))).toBe(
-      "[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]",
+      `[0:v]ass=filename=subtitles.ass:fontsdir=fonts,${tags}[v]`,
     );
     const later = graph(burnPartArgs(plan(), "/w/p2.ffconcat", "/w/p2.mp4", 900, portraits));
     expect(later).toContain("[0:v][pic0]overlay=x=10:y=20:eof_action=repeat[panel0]");
     expect(later).toContain(
-      "[panel0]setpts=PTS+900/(30*TB),ass=filename=subtitles.ass:fontsdir=fonts,setpts=PTS-STARTPTS,fps=30[v]",
+      `[panel0]setpts=PTS+900/(30*TB),ass=filename=subtitles.ass:fontsdir=fonts,setpts=PTS-STARTPTS,fps=30,${tags}[v]`,
     );
   });
 

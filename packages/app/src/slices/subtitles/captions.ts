@@ -121,7 +121,8 @@ export function serializeAss(cues: readonly CaptionCue[], style: SubtitleStyle):
   const name = style.fontName.replace(/[\p{Cc},]/gu, " ").trim();
   const placement = subtitlePlacement(style.position ?? "bottom", style.height);
   const position = `{\\an${placement.alignment}\\pos(${style.width / 2},${placement.y})}`;
-  const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${style.width}\nPlayResY: ${style.height}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${name},${style.fontSize},${assColour(style.color, "&H00FFFFFF")},${assColour(style.color, "&H00FFFFFF")},${assColour(style.outlineColor, "&H00101010")},&H80000000,0,0,0,0,100,100,0,0,1,2.5,1,2,60,60,60,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  // YCbCr Matrix: without it, ffmpeg 7.1 and later draw the colours as BT.601 on a BT.709 picture.
+  const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${style.width}\nPlayResY: ${style.height}\nYCbCr Matrix: TV.709\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${name},${style.fontSize},${assColour(style.color, "&H00FFFFFF")},${assColour(style.color, "&H00FFFFFF")},${assColour(style.outlineColor, "&H00101010")},&H80000000,0,0,0,0,100,100,0,0,1,2.5,1,2,60,60,60,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   return (
     header +
     cues

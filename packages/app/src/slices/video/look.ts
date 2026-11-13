@@ -1,3 +1,4 @@
+import { bt709Scale } from "./colour.js";
 import type { Card, EditList, Look } from "./edit-list.js";
 import type { Atmosphere, ColorGrade, LookLevel } from "./edit-settings.js";
 
@@ -30,23 +31,36 @@ const grainStrength: Readonly<Record<Exclude<LookLevel, "off">, number>> = {
 export function lookEncoding(look: Look | undefined): readonly string[] {
   return look !== undefined && look.grain !== "off" ? ["-tune", "grain"] : [];
 }
-const grades: Readonly<Record<Exclude<ColorGrade, "none">, string>> = {
+// Each grade's filters on RGB, then on YUV.
+const grades: Readonly<
+  Record<Exclude<ColorGrade, "none">, { readonly rgb?: string; readonly yuv?: string }>
+> = {
   // Golden highlights, a touch of amber in the mids, cooler shadows kept for depth.
-  warm:
-    "colorbalance=rs=0.02:bs=0.04:rm=0.08:gm=0.02:bm=-0.07:rh=0.07:gh=0.03:bh=-0.08," +
-    "eq=saturation=1.12:contrast=1.04",
+  warm: {
+    rgb: "colorbalance=rs=0.02:bs=0.04:rm=0.08:gm=0.02:bm=-0.07:rh=0.07:gh=0.03:bh=-0.08",
+    yuv: "eq=saturation=1.12:contrast=1.04",
+  },
   // Blue-green shadows and mids, highlights barely touched.
-  cold: "colorbalance=rs=-0.06:bs=0.08:rm=-0.05:gm=0.01:bm=0.06:rh=-0.02:bh=0.03,eq=saturation=0.9",
-  desaturated: "eq=saturation=0.55:contrast=1.06",
+  cold: {
+    rgb: "colorbalance=rs=-0.06:bs=0.08:rm=-0.05:gm=0.01:bm=0.06:rh=-0.02:bh=0.03",
+    yuv: "eq=saturation=0.9",
+  },
+  desaturated: { yuv: "eq=saturation=0.55:contrast=1.06" },
   // The classic sepia matrix.
-  sepia:
-    "colorchannelmixer=rr=0.393:rg=0.769:rb=0.189:gr=0.349:gg=0.686:gb=0.168:br=0.272:bg=0.534:bb=0.131",
+  sepia: {
+    rgb: "colorchannelmixer=rr=0.393:rg=0.769:rb=0.189:gr=0.349:gg=0.686:gb=0.168:br=0.272:bg=0.534:bb=0.131",
+  },
 };
 
 // The grade as a filter for a picture's source, or undefined for none: a still is graded once,
-// a clip frame by frame.
-export function gradeFilter(look: Look | undefined): string | undefined {
-  return look === undefined || look.grade === "none" ? undefined : grades[look.grade];
+// a clip frame by frame. A still is RGB, so its one step into YUV is made here as BT.709 rather
+// than left to ffmpeg's BT.601 default; a clip's YUV is left as it is.
+export function gradeFilter(look: Look | undefined, source: "still" | "video"): string | undefined {
+  if (look === undefined || look.grade === "none") return undefined;
+  const { rgb, yuv } = grades[look.grade];
+  const toYuv =
+    source === "still" && yuv !== undefined ? `scale=${bt709Scale},format=yuv444p` : undefined;
+  return [rgb, toYuv, yuv].filter((step) => step !== undefined).join(",");
 }
 
 export function hasLook(look: Look | undefined): boolean {
@@ -172,7 +186,7 @@ function atmosphereSource(
   const lit = (plane: string): string => `if(gt(${peak},0),255*${plane}(X,Y)/${peak},0)`;
   const light =
     `format=gbrap,geq=r='${lit("r")}':g='${lit("g")}':b='${lit("b")}':` +
-    `a='${peak}*${atmosphereOpacity[atmosphere]}',format=yuva420p`;
+    `a='${peak}*${atmosphereOpacity[atmosphere]}',scale=${bt709Scale},format=yuva420p`;
   const moving = (h: number, v: number): string =>
     `${light},loop=loop=-1:size=1,setpts=N/(${String(fps)}*TB),` +
     `scroll=h=${String(h)}:v=${String(v)}:hpos=${position(h, start)}:vpos=${position(v, start)}`;

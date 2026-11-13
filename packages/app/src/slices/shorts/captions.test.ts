@@ -146,6 +146,8 @@ it("highlights the word being spoken, one event per word, centred below the midd
     { width: 1080, height: 1920, fontName: "Atkinson, Bold" },
   );
   expect(ass).toContain("PlayResX: 1080\nPlayResY: 1920");
+  // ffmpeg 7.1 and later draw a script that does not say so as BT.601 on the BT.709 picture.
+  expect(ass.split("\n\n")[0]?.split("\n")).toContain("YCbCr Matrix: TV.709");
   // 7.5% of the height, bold, the project's font with the comma ASS would read as a field
   // separator taken out.
   expect(ass).toContain("Style: Short,Atkinson  Bold,144,&H00FFFFFF,&H00FFFFFF,&H00000000,");

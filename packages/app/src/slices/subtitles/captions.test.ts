@@ -28,6 +28,17 @@ describe("timed caption files", () => {
     expect(ass).not.toContain("Barlow\n");
     expect(ass).toContain("PlayResX: 1920");
   });
+  // ffmpeg 7.1 and later draw a script that does not say so as BT.601 on the BT.709 picture.
+  it("says its colours are for a BT.709 picture", () => {
+    const ass = serializeAss([{ start: 0, end: 1, text: "Hello" }], {
+      width: 1920,
+      height: 1080,
+      fontSize: 48,
+      fontName: "Barlow",
+      color: "#E8B923",
+    });
+    expect(ass.split("\n\n")[0]?.split("\n")).toContain("YCbCr Matrix: TV.709");
+  });
   it("wraps long captions into at most two short lines", () => {
     const words = Array.from({ length: 50 }, (_, index) => ({
       text: "example",

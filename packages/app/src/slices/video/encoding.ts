@@ -1,6 +1,7 @@
 import { constants, setPriority } from "node:os";
 import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
+import { bt709Tags } from "./colour.js";
 import type { Look } from "./edit-list.js";
 import { lookEncoding } from "./look.js";
 
@@ -81,12 +82,14 @@ export function codecArgs(
       "250",
       "-pix_fmt",
       "yuv420p",
+      ...bt709Tags,
     ];
   return [
     "-c:v",
     "libx264",
     "-pix_fmt",
     "yuv420p",
+    ...bt709Tags,
     ...lookEncoding(look),
     ...(role === "intermediate"
       ? [...(encode.clipSpeed === "fast" ? ["-preset", "veryfast"] : []), "-crf", intermediateCrf]
@@ -134,7 +137,7 @@ const testArgs = [
 ];
 
 // The filters a render runs in the NVENC ffmpeg besides the encoder.
-const neededFilters = ["zoompan", "xfade", "ass"];
+const neededFilters = ["zoompan", "perspective", "fillborders", "xfade", "ass"];
 
 // Which ffmpeg can encode on an NVIDIA card, asked once and remembered until Slopify restarts.
 // The bundled ffmpeg first, then the computer's own: unlike everything else, NVENC is the

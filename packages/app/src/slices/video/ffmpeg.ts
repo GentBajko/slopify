@@ -3,7 +3,8 @@ import { isAbsolute, resolve as resolvePath } from "node:path";
 import { errorText, internalError } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { bedChains, bedInputs } from "./ambient-mix.js";
-import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
+import { bt709Frames, bt709Scale } from "./colour.js";
+import type { EditList, Shot, TransitionStyle } from "./edit-list.js";
 import {
   codecArgs,
   defaultEncode,
@@ -12,19 +13,14 @@ import {
   type VideoEncode,
 } from "./encoding.js";
 import { gradeFilter, lookChain, placed } from "./look.js";
-import { decimal, zoomRange } from "./plan.js";
+import { moveOf, type StillSizes } from "./move.js";
+import { decimal } from "./plan.js";
 import { type Segment, segments, transitionHalves } from "./transitions.js";
 
 // Hand-rolled per the standards: the filtergraph is the load-bearing part of this slice
 // and a wrapper would hide it. Every value goes into an argument array, never a shell
 // string, so a title or a filename cannot become a command.
 
-// zoompan works on a still that has been pre-scaled, because it steps the zoom in
-// sub-pixel increments and a source at output resolution visibly jitters where the zoom is
-// meant to be smooth and linear. A pan steps its crop window in whole source pixels, so
-// the same four times gives it quarter-pixel steps on screen. Four times the frame is
-// enough at 122.5%.
-const prescale = 4;
 const sampleRate = 44100;
 const channelLayout = "stereo";
 
@@ -60,14 +56,14 @@ export function resolveFfmpeg(
 // ffmpeg run with a single input, and the concat demuxer then joins the clips in shot
 // order from a list file. Memory is one clip's worth whatever the length; the command
 // lines stay a few hundred characters (Windows allows 32,767) because the timeline lives
-// in the list, not the arguments; and a still that comes round with the same motion costs
-// no second zoompan. The clips are identical encodes, so without burned-in captions the
+// in the list, not the arguments; and a still that comes round with the same motion is not
+// rendered a second time. The clips are identical encodes, so without burned-in captions the
 // join copies them rather than encoding again.
 //
 // A transition is one more clip in the list (`transitions.ts`), and the Look is filters on
 // each clip (`look.ts`), so neither changes how the render runs: still one clip per run,
-// still a concat join. The runs go several at a time (`slideshow.ts`), since zoompan uses
-// one core.
+// still a concat join. The runs go several at a time (`slideshow.ts`), since one clip does
+// not fill the machine.
 export interface SlideshowClip {
   // Named by its place in the list: `c1.mp4`, `c2.mp4`, ...
   readonly name: string;
@@ -142,13 +138,14 @@ function clipKey(
   );
 }
 
+// The frame a clip is rendered into, with each still's own size where it could be read: a
+// still with no more pixels than the frame is sampled from a smaller base (`move.ts`).
+type Frame = Pick<EditList, "width" | "height" | "fps"> & {
+  readonly stills?: StillSizes | undefined;
+};
+
 // A whole shot as one clip.
-export function clipArgs(
-  frame: Pick<EditList, "width" | "height" | "fps">,
-  shot: Shot,
-  output: string,
-  intermediate = false,
-): string[] {
+export function clipArgs(frame: Frame, shot: Shot, output: string, intermediate = false): string[] {
   return segmentArgs(
     { ...frame, shots: [shot] },
     { kind: "shot", shot: 0, from: 0, count: shot.frames, start: 0 },
@@ -159,8 +156,7 @@ export function clipArgs(
 
 // One clip of the slideshow: part of a shot, or a transition between two, with the Look.
 export function segmentArgs(
-  edit: Pick<EditList, "width" | "height" | "fps" | "shots"> &
-    Partial<Pick<EditList, "look" | "cards">>,
+  edit: Frame & Pick<EditList, "shots"> & Partial<Pick<EditList, "look" | "cards">>,
   segment: Segment,
   output: string,
   intermediate = false,
@@ -180,12 +176,15 @@ export function segmentArgs(
         ),
       );
     const at = inputs.filter((one) => one === "-i").length;
-    const built = pictureChain(edit, shot, from, segment.count, at, label, gradeFilter(edit.look));
+    const grade = gradeFilter(edit.look, shot.source.kind === "video" ? "video" : "still");
+    const built = pictureChain(edit, shot, from, segment.count, at, label, grade);
     inputs.push(...built.inputs);
     chains.push(built.chain);
   };
-  const look = lookChain(edit, segment.start, segment.count, "[p]", "[v]", cardsFile);
-  const picked = look === undefined ? "[v]" : "[p]";
+  // The last filter's output label, with the frames' colour tags set on the way out.
+  const tagged = `,${bt709Frames}[v]`;
+  const look = lookChain(edit, segment.start, segment.count, "[p]", tagged, cardsFile);
+  const picked = look === undefined ? tagged : "[p]";
   if (segment.kind === "shot") picture(edit.shots[segment.shot], segment.from, picked);
   else {
     const before = edit.shots[segment.from];
@@ -228,7 +227,7 @@ const xfadeNames: Readonly<Record<TransitionStyle, string>> = {
 // motion holds) or plays on (a clip keeps running), which is what a transition overlapping
 // the cut shows.
 function pictureChain(
-  frame: Pick<EditList, "width" | "height" | "fps">,
+  frame: Frame,
   shot: Shot,
   from: number,
   count: number,
@@ -256,25 +255,51 @@ function pictureChain(
         `setpts=PTS-STARTPTS,fps=${String(fps)},format=yuv420p${label}`,
     };
   }
-  const move = zoompan(shot.motion, shot.frames, frameExpression(from, count, shot.frames));
-  // A still that does not move has no sub-pixel steps to smooth, so it is not prescaled.
-  const factor = move === undefined ? 1 : prescale;
-  const wide = frame.width * factor;
-  const tall = frame.height * factor;
+  const move = moveOf(
+    frame,
+    shot.motion,
+    shot.frames,
+    frameExpression(from, count, shot.frames),
+    frame.stills?.get(source.path),
+  );
   // Clips that meet in a transition are brought to one pixel format first, since xfade
   // refuses to blend two that differ; a plain shot is left as it always was.
   const plain = from === 0 && count === shot.frames;
+  const still =
+    `[${String(input)}:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
+    // The grade is applied here, to the one still frame, rather than to every frame after.
+    (grade === undefined ? "" : `${grade},`);
+  const out = `setsar=1${plain ? "" : ",format=yuv420p"}${label}`;
+  // zoompan turns the one still into the shot's frames either way: it is what ends the
+  // stream at exactly `count`.
+  if (move === undefined)
+    return {
+      inputs: ["-i", source.path],
+      chain:
+        still +
+        // Cover the frame and centre-crop, never letterbox.
+        `scale=${frame.width}:${frame.height}:force_original_aspect_ratio=increase:${bt709Scale},` +
+        `crop=${frame.width}:${frame.height},` +
+        `zoompan=z='1':d=${count}:x='${centredX}':y='${centredY}':` +
+        `s=${frame.width}x${frame.height}:fps=${frame.fps},${out}`,
+    };
+  const { base, canvas } = move;
   return {
     inputs: ["-i", source.path],
     chain:
-      `[${String(input)}:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
-      // The grade is applied here, to the one still frame, rather than to every frame after.
-      (grade === undefined ? "" : `${grade},`) +
-      // Cover the frame and centre-crop, never letterbox.
-      `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
-      `zoompan=z='${move?.z ?? "1"}':d=${count}:` +
-      `x='${move?.x ?? centredX}':y='${move?.y ?? centredY}':` +
-      `s=${frame.width}x${frame.height}:fps=${frame.fps},setsar=1${plain ? "" : ",format=yuv420p"}${label}`,
+      still +
+      `scale=${base.width}:${base.height}:force_original_aspect_ratio=increase:flags=lanczos:${bt709Scale},` +
+      `crop=${base.width}:${base.height},` +
+      // A base under the frame sits top left of it, its last column and row drawn out to
+      // the frame's edges, so the sampler never reads black past the still.
+      (canvas.width > base.width
+        ? `pad=${canvas.width}:${canvas.height}:0:0,` +
+          `fillborders=right=${canvas.width - base.width}:bottom=${canvas.height - base.height}:mode=smear,`
+        : "") +
+      `zoompan=z='1':d=${count}:x='0':y='0':s=${canvas.width}x${canvas.height}:fps=${frame.fps},` +
+      `perspective=${move.quad}:sense=source:eval=frame:interpolation=cubic,` +
+      (canvas.width > frame.width ? `crop=${frame.width}:${frame.height}:0:0,` : "") +
+      out,
   };
 }
 
@@ -289,7 +314,7 @@ export function slowdown(clip: number, shot: number): string {
   return decimal(Math.round(Math.min(slowestSpeed, shot / clip) * 1000));
 }
 
-// zoompan's `on` counts the clip's own frames from 0; a clip that starts `from` frames into
+// A filter's `on` counts the clip's own frames from 0; a clip that starts `from` frames into
 // its shot adds that, and one that reaches before or past the shot holds at its ends.
 function frameExpression(from: number, count: number, frames: number): string {
   const shifted = from === 0 ? "on" : `(on${from > 0 ? "+" : "-"}${String(Math.abs(from))})`;
@@ -477,13 +502,15 @@ function burnIn(
     inputs.push("-i", portrait.path);
     const size = String(portrait.size);
     video.push(
-      `[${String(first)}:v]scale=${size}:${size}:force_original_aspect_ratio=increase,crop=${size}:${size},setsar=1[pic${String(at)}]`,
+      `[${String(first)}:v]scale=${size}:${size}:force_original_aspect_ratio=increase:${bt709Scale},crop=${size}:${size},setsar=1[pic${String(at)}]`,
       `${source}[pic${String(at)}]overlay=x=${String(portrait.x)}:y=${String(portrait.y)}:eof_action=repeat[panel${String(at)}]`,
     );
     source = `[panel${String(at)}]`;
     first += 1;
   });
-  video.push(`${source}${before}ass=filename=subtitles.ass:fontsdir=fonts${after}[v]`);
+  video.push(
+    `${source}${before}ass=filename=subtitles.ass:fontsdir=fonts${after},${bt709Frames}[v]`,
+  );
   return video;
 }
 
@@ -501,50 +528,6 @@ const progressArgs = [
 
 const centredX = "iw/2-(iw/zoom/2)";
 const centredY = "ih/2-(ih/zoom/2)";
-
-interface Zoompan {
-  readonly z: string;
-  readonly x: string;
-  readonly y: string;
-}
-
-// zoompan's expressions for a motion, or undefined for one that does not move. `on` is
-// zoompan's output frame counter, 0 to d-1 (`at` shifts it for part of a shot), and a
-// one-frame shot has no span to divide by, so it holds where it starts. `zoom` in x and y is
-// the current zoom, so iw-iw/zoom is the room the crop window has to travel in.
-function zoompan(motion: Motion, frames: number, at = "on"): Zoompan | undefined {
-  if (motion.kind === "still") return undefined;
-  const range = zoomRange(motion.percent);
-  if (range === undefined) return undefined;
-  const span = frames - 1;
-  if (motion.kind === "zoom") {
-    // Zoom in rises from 100%, zoom out falls back to it, linear over the shot.
-    const z =
-      motion.direction === "in"
-        ? span < 1
-          ? range.from
-          : `${range.from}+${range.by}*${at}/${span}`
-        : span < 1
-          ? range.to
-          : `${range.to}-${range.by}*${at}/${span}`;
-    return { z, x: centredX, y: centredY };
-  }
-  return {
-    z: range.to,
-    x: `(iw-iw/zoom)*(${travel(motion.from.x, motion.to.x, span, at)})`,
-    y: `(ih-ih/zoom)*(${travel(motion.from.y, motion.to.y, span, at)})`,
-  };
-}
-
-// A share of the room from `from` to `to`, linear over the shot. Built in whole
-// thousandths as decimal text, like the zoom, so 1 - 0.5 reads 0.5 and never
-// 0.49999999999999994.
-function travel(from: number, to: number, span: number, at: string): string {
-  const start = Math.round(from * 1000);
-  const by = Math.round(to * 1000) - start;
-  if (span < 1 || by === 0) return decimal(start);
-  return `${decimal(start)}${by > 0 ? "+" : "-"}${decimal(Math.abs(by))}*${at}/${span}`;
-}
 
 function seconds(value: number): string {
   return value.toFixed(3);

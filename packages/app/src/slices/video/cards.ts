@@ -30,6 +30,8 @@ export function cardsAss(
     "ScriptType: v4.00+",
     `PlayResX: ${String(width)}`,
     `PlayResY: ${String(height)}`,
+    // Without it, ffmpeg 7.1 and later draw the colours as BT.601 on a BT.709 picture.
+    "YCbCr Matrix: TV.709",
     "WrapStyle: 0",
     "ScaledBorderAndShadow: yes",
     "",

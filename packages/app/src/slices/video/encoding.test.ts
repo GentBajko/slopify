@@ -13,20 +13,38 @@ import {
   setRenderPriority,
 } from "./encoding.js";
 
+const bt709 = [
+  "-colorspace",
+  "bt709",
+  "-color_primaries",
+  "bt709",
+  "-color_trc",
+  "bt709",
+  "-color_range",
+  "tv",
+];
+
 const log = (): { write: (...args: unknown[]) => void; lines: unknown[][] } => {
   const lines: unknown[][] = [];
   return { write: (...args: unknown[]) => void lines.push(args), lines };
 };
 
 describe("codecArgs", () => {
-  it("keeps today's x264 arguments for a thorough render, so cached clips stay valid", () => {
+  it("encodes x264 at its default preset, tagged BT.709 limited range", () => {
     const x264 = { kind: "x264", clipSpeed: "thorough" } as const;
-    expect(codecArgs(x264, "final", undefined)).toEqual(["-c:v", "libx264", "-pix_fmt", "yuv420p"]);
+    expect(codecArgs(x264, "final", undefined)).toEqual([
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      ...bt709,
+    ]);
     expect(codecArgs(x264, "intermediate", undefined)).toEqual([
       "-c:v",
       "libx264",
       "-pix_fmt",
       "yuv420p",
+      ...bt709,
       "-crf",
       "16",
     ]);
@@ -36,6 +54,7 @@ describe("codecArgs", () => {
       "libx264",
       "-pix_fmt",
       "yuv420p",
+      ...bt709,
       "-tune",
       "grain",
       "-crf",
@@ -50,13 +69,20 @@ describe("codecArgs", () => {
       "libx264",
       "-pix_fmt",
       "yuv420p",
+      ...bt709,
       "-preset",
       "veryfast",
       "-crf",
       "16",
     ]);
     // A clip joined by copying is the finished picture, so it keeps the thorough preset.
-    expect(codecArgs(fast, "final", undefined)).toEqual(["-c:v", "libx264", "-pix_fmt", "yuv420p"]);
+    expect(codecArgs(fast, "final", undefined)).toEqual([
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      ...bt709,
+    ]);
   });
 
   it("encodes on the NVIDIA card at its highest quality, constant quality per role", () => {
@@ -73,6 +99,7 @@ describe("codecArgs", () => {
       expect(after("-b:v")).toBe("0");
       expect(args).not.toContain("-multipass");
       expect(after("-pix_fmt")).toBe("yuv420p");
+      expect(args.slice(-bt709.length)).toEqual(bt709);
       // x264's grain tuning means nothing to NVENC.
       expect(args).not.toContain("grain");
     }
@@ -83,7 +110,11 @@ describe("codecArgs", () => {
 // A fake ffmpeg per path: what `-encoders` and `-filters` list, and whether a test encode works.
 function fakeExec(
   machines: Readonly<
-    Record<string, { readonly encoders: string; readonly encodes: boolean } | "missing">
+    Record<
+      string,
+      | { readonly encoders: string; readonly encodes: boolean; readonly filters?: string }
+      | "missing"
+    >
   >,
 ): NvencExec & { readonly calls: string[][] } {
   const calls: string[][] = [];
@@ -92,14 +123,16 @@ function fakeExec(
     const machine = machines[bin];
     if (machine === undefined || machine === "missing") throw new Error(`spawn ${bin} ENOENT`);
     if (args.includes("-encoders")) return machine.encoders;
-    if (args.includes("-filters"))
-      return " .. ass               V->V       Render ASS\n .. zoompan           V->V       Zoom\n .S xfade             VV->V      Cross fade\n";
+    if (args.includes("-filters")) return machine.filters ?? everyFilter;
     if (!machine.encodes) throw new Error("ffmpeg exited with code 1: OpenEncodeSessionEx failed");
     return "";
   };
   return Object.assign(exec, { calls });
 }
 
+const someFilters =
+  " .. ass               V->V       Render ASS\n .. zoompan           V->V       Zoom\n .S xfade             VV->V      Cross fade\n";
+const everyFilter = `${someFilters} TS perspective       V->V       Correct perspective\n TS fillborders       V->V       Fill borders\n`;
 const withNvenc = " V....D h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)\n";
 const withoutNvenc = " V....D libx264              libx264 H.264 / AVC (codec h264)\n";
 
@@ -123,6 +156,23 @@ describe("createNvencProbe", () => {
     expect(test?.[0]).toBe("ffmpeg");
     expect(test).toContain("lavfi");
     expect(test).toContain("null");
+  });
+
+  it("passes over an ffmpeg with NVENC that lacks a filter a video needs, and says which", async () => {
+    const logged = log();
+    const probe = createNvencProbe({
+      candidates: ["/old/ffmpeg"],
+      exec: fakeExec({
+        "/old/ffmpeg": { encoders: withNvenc, encodes: true, filters: someFilters },
+      }),
+      log: logged,
+    });
+    const status = await probe();
+    if (status.available) throw new Error("expected NVENC to be unavailable");
+    expect(status.reason).toBe(failedNvenc);
+    expect(status.detail).toBe(
+      "the ffmpeg at /old/ffmpeg has NVENC but not the perspective, fillborders filter a video needs",
+    );
   });
 
   it("says no NVIDIA encoder was found when no ffmpeg lists one", async () => {
