@@ -1,5 +1,6 @@
 import type { RevisionView } from "@app/slices/revisions/model.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { focusManager, useQuery } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -178,4 +179,43 @@ it("retains legacy file paths when the project explicitly has no revision", () =
   );
   expect(screen.getByText("Image").getAttribute("href")).toBe(`${testOrigin}/files/p1/image-1`);
   expect(screen.getByLabelText("Folder").textContent).toBe("null");
+});
+
+// Live events and saves keep the saved version fresh, and a finished project's is megabytes, so
+// coming back to the window must not ask for it again the way it asks for everything else.
+it("does not ask for the saved version again when the window comes back", async () => {
+  let asked = 0;
+  let other = 0;
+  function Other() {
+    useQuery({
+      queryKey: ["something-else"],
+      queryFn: () => {
+        other += 1;
+        return other;
+      },
+    });
+    return null;
+  }
+  renderApp(
+    <RevisionMedia projectId="p1" revisionId="r1">
+      <Other />
+    </RevisionMedia>,
+    testDeps({
+      "GET /api/projects/p1/revisions/r1": (request) => {
+        asked += 1;
+        return jsonAnswer({ view: view("r1", "record1") })(request);
+      },
+    }),
+  );
+  await waitFor(() => expect([asked, other]).toEqual([1, 1]));
+  try {
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await waitFor(() => expect(other).toBe(2));
+    expect(asked).toBe(1);
+  } finally {
+    focusManager.setFocused(undefined);
+  }
 });

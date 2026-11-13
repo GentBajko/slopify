@@ -94,3 +94,51 @@ export function coalesce(run: () => void, delayMs: number): Coalescer {
     },
   };
 }
+
+// burstMs: short enough that an image appears while the eye is still on the grid, long enough
+// that a stage landing sixty of them costs two requests rather than sixty. meterMs: nobody
+// reads a meter faster. settleMs: how long what a step saves on its way, which no event names,
+// may wait to show.
+export const liveWindows = { burstMs: 200, meterMs: 1000, settleMs: 5000 } as const;
+
+export interface LiveRefetch {
+  // Anything but a progress report: the project and everything filed under it.
+  readonly all: () => void;
+  // A step's progress report.
+  readonly progress: () => void;
+  readonly stop: () => void;
+}
+
+// What a run's events ask of the server. A step reports its progress up to twice a second for
+// as long as it runs, and a report moves a meter and nothing else. Answering each one with
+// everything filed under the project (a finished project's saved version alone is megabytes)
+// kept the one thread that serves every page busy with the page that was watching the run. So
+// a report asks for the meter, and for everything only once the window after it has passed.
+export function liveRefetch(
+  ask: { readonly everything: () => void; readonly meter: () => void },
+  windows: {
+    readonly burstMs: number;
+    readonly meterMs: number;
+    readonly settleMs: number;
+  } = liveWindows,
+): LiveRefetch {
+  const everything = coalesce(ask.everything, windows.burstMs);
+  const meter = coalesce(ask.meter, windows.meterMs);
+  let settle: ReturnType<typeof setTimeout> | undefined;
+  return {
+    all: everything.ask,
+    progress: (): void => {
+      meter.ask();
+      settle ??= setTimeout(() => {
+        settle = undefined;
+        everything.ask();
+      }, windows.settleMs);
+    },
+    stop: (): void => {
+      everything.stop();
+      meter.stop();
+      if (settle !== undefined) clearTimeout(settle);
+      settle = undefined;
+    },
+  };
+}

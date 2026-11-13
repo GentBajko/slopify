@@ -11,7 +11,7 @@ import { MediaFrame } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import { startedAt } from "@/lib/utils";
 import { Stamp } from "@/library/time";
-import { keys } from "@/queries";
+import { keys, quietOnReturn } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { outputLabel } from "./output-label.js";
 import { outputStateWords } from "./output-status.js";
@@ -214,6 +214,7 @@ function VersionFiles({
       if (!result.ok) throw new Error(result.message);
       return result.value.view;
     },
+    ...quietOnReturn,
   });
   const selectedView = view.data;
   if (view.error !== null) return <p role="alert">{view.error.message}</p>;

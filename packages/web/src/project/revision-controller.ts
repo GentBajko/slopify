@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { readProject } from "@/api";
 import { useApp } from "@/app-context";
 import { copyText } from "@/fixes/fix-actions";
-import { keys } from "@/queries";
+import { keys, quietOnReturn } from "@/queries";
 import { describeEdit, reapplyEdit } from "./draft-merge.js";
 import { type ButtonConsent, startsWithoutReview } from "./rebuild-consent.js";
 import type { RebuildConsent } from "./rebuild-review.js";
@@ -51,6 +51,7 @@ export function useRevisionController(
   const saved = useQuery({
     queryKey: keys.revision(projectId, currentRevisionId ?? ""),
     enabled: currentRevisionId !== null,
+    ...quietOnReturn,
     queryFn: async () => {
       if (currentRevisionId === null)
         throw new Error(

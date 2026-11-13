@@ -1,7 +1,7 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectBody } from "@/api";
-import { coalesce, patchProject } from "./live.js";
+import { coalesce, liveRefetch, patchProject } from "./live.js";
 
 function stage(over: Partial<Stage>): Stage {
   return {
@@ -157,5 +157,83 @@ describe("coalescing the refetches an event burst asks for", () => {
     coalescer.stop();
     vi.advanceTimersByTime(1000);
     expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("turning a run's events into requests", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function watching() {
+    vi.useFakeTimers();
+    const everything = vi.fn();
+    const meter = vi.fn();
+    return { everything, meter, live: liveRefetch({ everything, meter }) };
+  }
+
+  it("answers a progress report with the meter alone, at once", () => {
+    const { everything, meter, live } = watching();
+    live.progress();
+    expect(meter).toHaveBeenCalledTimes(1);
+    expect(everything).not.toHaveBeenCalled();
+  });
+
+  it("reads the meter once a second however fast the reports come", () => {
+    const { meter, live } = watching();
+    // Several steps side by side, each reporting twice a second, for ten seconds.
+    for (let at = 0; at < 100; at += 1) {
+      live.progress();
+      vi.advanceTimersByTime(100);
+    }
+    expect(meter.mock.calls.length).toBeGreaterThanOrEqual(10);
+    expect(meter.mock.calls.length).toBeLessThanOrEqual(11);
+  });
+
+  it("asks for everything once in five seconds of progress reports, and never at the first", () => {
+    const { everything, live } = watching();
+    for (let at = 0; at < 100; at += 1) {
+      live.progress();
+      vi.advanceTimersByTime(100);
+    }
+    expect(everything).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks for everything once more after the last progress report", () => {
+    const { everything, live } = watching();
+    live.progress();
+    vi.advanceTimersByTime(4999);
+    expect(everything).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(everything).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(60_000);
+    expect(everything).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks for everything at once when anything else happens", () => {
+    const { everything, meter, live } = watching();
+    live.all();
+    expect(everything).toHaveBeenCalledTimes(1);
+    expect(meter).not.toHaveBeenCalled();
+  });
+
+  it("folds a burst of other events into one more ask", () => {
+    const { everything, live } = watching();
+    for (let at = 0; at < 60; at += 1) live.all();
+    expect(everything).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(200);
+    expect(everything).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks for nothing more once the page has gone", () => {
+    const { everything, meter, live } = watching();
+    live.all();
+    live.all();
+    live.progress();
+    live.progress();
+    live.stop();
+    vi.advanceTimersByTime(60_000);
+    expect(everything).toHaveBeenCalledTimes(1);
+    expect(meter).toHaveBeenCalledTimes(1);
   });
 });

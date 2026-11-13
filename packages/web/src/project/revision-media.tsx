@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactElement, type ReactNode, useContext } from "react";
 import { type Api, fileUrl } from "@/api";
 import { useApp } from "@/app-context";
-import { keys } from "@/queries";
+import { keys, quietOnReturn } from "@/queries";
 import { revisionFileUrl, viewOf } from "./revision-api.js";
 
 interface MediaView {
@@ -33,6 +33,7 @@ export function RevisionMedia({
   const query = useQuery({
     queryKey: keys.revision(projectId, revisionId ?? ""),
     enabled: revisionId !== null,
+    ...quietOnReturn,
     queryFn: async () => {
       if (revisionId === null)
         throw new Error("This project has no saved version yet. Reload the page and try again.");

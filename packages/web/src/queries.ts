@@ -73,6 +73,13 @@ export const keys = {
   projectChannelLinks: (projectId: string) => ["channel-links", "project", projectId] as const,
 };
 
+// A return to the window asks every open question again: that is how a page learns what
+// changed where no event tells it, what the extension did in YouTube Studio above all. The
+// questions given this are the exception. Each reads a project's whole saved version on the server
+// (megabytes for a finished project), and a run's events, a save and a reconnect already ask
+// them again, so coming back to the window leaves them alone.
+export const quietOnReturn = { refetchOnWindowFocus: false } as const;
+
 // Live events keep these fresh (`events.ts`); while something runs they are also looked at
 // again every 15 seconds, so a missed event never leaves a page behind until a refresh. The
 // look-again stops while the tab is hidden; coming back to it refetches at once.
@@ -106,6 +113,7 @@ export function pronunciationGapsQuery(api: Api, id: string) {
   return queryOptions({
     queryKey: keys.pronunciationGaps(id),
     queryFn: () => readPronunciationGaps(api, id),
+    ...quietOnReturn,
   });
 }
 
@@ -113,6 +121,7 @@ export function pronunciationsHeardQuery(api: Api, id: string) {
   return queryOptions({
     queryKey: keys.pronunciationsHeard(id),
     queryFn: () => readPronunciationsHeard(api, id),
+    ...quietOnReturn,
   });
 }
 
