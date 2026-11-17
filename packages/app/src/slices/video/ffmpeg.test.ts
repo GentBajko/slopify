@@ -375,6 +375,22 @@ describe("concatList", () => {
 });
 
 describe("joinArgs", () => {
+  it("copies HEVC clips tagged hvc1, and H.264 and AV1 clips as they come", () => {
+    const join = (encode: Parameters<typeof joinArgs>[6]) =>
+      joinArgs(plan(), "/p/video.mp4", "/w/slides.ffconcat", false, [], "/w/sound.m4a", encode);
+    const h264 = join(undefined);
+    expect(h264.slice(h264.indexOf("-c:v"), h264.indexOf("-c:v") + 2)).toEqual(["-c:v", "copy"]);
+    expect(h264).not.toContain("-tag:v");
+    expect(join({ kind: "svtav1", bin: "f", clipSpeed: "thorough" })).toEqual(h264);
+    const hevc = join({ kind: "x265", clipSpeed: "thorough" });
+    expect(hevc.slice(hevc.indexOf("-c:v"), hevc.indexOf("-c:v") + 4)).toEqual([
+      "-c:v",
+      "copy",
+      "-tag:v",
+      "hvc1",
+    ]);
+  });
+
   it("reads the clips from the list and every audio segment as its own input", () => {
     const args = joinArgs(
       plan({

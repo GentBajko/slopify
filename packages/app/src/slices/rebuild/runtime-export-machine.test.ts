@@ -29,6 +29,22 @@ describe("exportMachine", () => {
     chosen.notice("The card stopped.");
     expect(chosen.notices).toEqual(["Encoded on the processor.", "The card stopped."]);
   });
+
+  it("asks for the project's video codec, and for H.264 when none is given (shorts)", async () => {
+    const asked: unknown[] = [];
+    const deps = {
+      renderMachine: async (projectId: string, codec: unknown) => {
+        asked.push([projectId, codec]);
+        return { machine };
+      },
+    } as unknown as ExportExecutionDeps;
+    await exportMachine(deps, "p1", "av1");
+    await exportMachine(deps, "p2");
+    expect(asked).toEqual([
+      ["p1", "av1"],
+      ["p2", "h264"],
+    ]);
+  });
 });
 
 describe("warningsOf", () => {

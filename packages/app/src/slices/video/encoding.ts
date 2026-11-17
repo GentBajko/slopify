@@ -3,11 +3,13 @@ import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { bt709Tags } from "./colour.js";
 import type { Look } from "./edit-list.js";
+import { type VideoCodec, videoCodecLabels } from "./edit-settings.js";
 import { lookEncoding } from "./look.js";
 
 // Settings → Production defaults → Rendering: how this computer encodes a video's picture.
 // They change how a video is made, never what it is, so no recipe fingerprint carries them and
-// a render reads them once as it starts (`renderMachine`).
+// a render reads them once as it starts (`renderMachine`). The finished video's codec is the
+// project's (`edit-settings.ts`), and combines with them here.
 export const videoEncoders = ["cpu", "nvidia"] as const;
 export type VideoEncoder = (typeof videoEncoders)[number];
 export const clipEncodeSpeeds = ["thorough", "fast"] as const;
@@ -28,11 +30,19 @@ export interface RenderSettings {
   readonly videoRenderConcurrency: number;
 }
 
-// What one render encodes with. NVENC runs in its own ffmpeg (`bin`), since the bundled one
-// has none; `clipSpeed` is what the processor uses should the card fail mid-render.
+// What one render encodes with. NVENC and SVT-AV1 run in their own ffmpeg (`bin`), since the
+// bundled one has neither; `clipSpeed` is what the processor uses should the card fail
+// mid-render. NVENC without a `codec` is H.264, as it always was.
 export type VideoEncode =
   | { readonly kind: "x264"; readonly clipSpeed: ClipEncodeSpeed }
-  | { readonly kind: "nvenc"; readonly bin: string; readonly clipSpeed: ClipEncodeSpeed };
+  | { readonly kind: "x265"; readonly clipSpeed: ClipEncodeSpeed }
+  | { readonly kind: "svtav1"; readonly bin: string; readonly clipSpeed: ClipEncodeSpeed }
+  | {
+      readonly kind: "nvenc";
+      readonly bin: string;
+      readonly clipSpeed: ClipEncodeSpeed;
+      readonly codec?: "hevc" | "av1";
+    };
 
 export interface RenderMachine {
   readonly encode: VideoEncode;
@@ -53,6 +63,19 @@ const intermediateCrf = "16";
 // that gap at that size).
 export const nvencQuality = { intermediate: 20, final: 28.5 } as const;
 
+// measured on a real 3-minute stretch of a 1080p30 video, slow pan and zoom over dense
+// engraving, each scoring about 94.4 VMAF against the H.264 file x264 makes today: SVT-AV1 at
+// preset 6, CRF 36 is about 29% of its size at about 7x real time on 32 threads; av1_nvenc at
+// CQ 34 about 44%; hevc_nvenc at CQ 27 about 59%. x265 at CRF 26 (preset medium) is not
+// measured yet: a starting point expected to land near the same quality.
+export const codecQuality = {
+  svtav1Preset: 6,
+  svtav1Crf: 36,
+  av1Nvenc: 34,
+  hevcNvenc: 27,
+  x265Crf: 26,
+} as const;
+
 // measured on the first 24 shots of a real project, each still shown once (11.5 minutes, 32
 // threads, changelog.d/2026-11-13-one-encode.md): clips that draw their own captions took
 // 83 s at x264's default preset and 69 s at `faster`, for 1.2 VMAF less. That is the step
@@ -60,18 +83,27 @@ export const nvencQuality = { intermediate: 20, final: 28.5 } as const;
 // cost 4.3 VMAF.
 const captionedFastPreset = "faster";
 
+// x264's own keyframe interval, so every clip, whatever its codec, opens on its one keyframe as
+// x264's do and the clips still join by copying.
+const keyframes = ["-g", "250"];
+
+// HEVC in MP4 tagged hvc1 rather than hev1, which Apple's players and some browsers refuse.
+const hvc1 = ["-tag:v", "hvc1"];
+
 // `final` is a picture someone watches (a clip joined by copying, a burned-in part, the join);
-// `intermediate` is a clip decoded again under burned-in captions; `captioned` is a clip that
-// draws its own captions, watched as it is.
+// `intermediate` is a clip decoded again under burned-in captions, never watched, so it stays
+// H.264 whatever the video's codec; `captioned` is a clip that draws its own captions, watched
+// as it is.
 export function codecArgs(
   encode: VideoEncode,
   role: "intermediate" | "final" | "captioned",
   look: Look | undefined,
 ): string[] {
-  if (encode.kind === "nvenc")
+  if (encode.kind === "nvenc") {
+    const codec = role === "intermediate" ? undefined : encode.codec;
     return [
       "-c:v",
-      "h264_nvenc",
+      `${codec ?? "h264"}_nvenc`,
       // The slowest, best preset, constant quality with no bitrate cap. No `-multipass`: measured,
       // a second full-resolution pass gave no better picture for its size on these videos.
       "-preset",
@@ -81,17 +113,53 @@ export function codecArgs(
       "-rc",
       "vbr",
       "-cq",
-      String(nvencQuality[role === "intermediate" ? "intermediate" : "final"]),
+      String(
+        codec === "hevc"
+          ? codecQuality.hevcNvenc
+          : codec === "av1"
+            ? codecQuality.av1Nvenc
+            : nvencQuality[role === "intermediate" ? "intermediate" : "final"],
+      ),
       "-b:v",
       "0",
-      // x264's own keyframe interval, so a clip opens on its one keyframe as x264's do and the
-      // clips still join by copying.
-      "-g",
-      "250",
+      ...keyframes,
+      ...(codec === "hevc" ? hvc1 : []),
       "-pix_fmt",
       "yuv420p",
       ...bt709Tags,
     ];
+  }
+  if (encode.kind === "x265" || encode.kind === "svtav1") {
+    if (role === "intermediate")
+      return codecArgs({ kind: "x264", clipSpeed: encode.clipSpeed }, role, look);
+    const common = ["-pix_fmt", "yuv420p", ...bt709Tags];
+    return encode.kind === "x265"
+      ? [
+          "-c:v",
+          "libx265",
+          ...common,
+          ...lookEncoding(look),
+          "-preset",
+          "medium",
+          "-crf",
+          String(codecQuality.x265Crf),
+          ...keyframes,
+          ...hvc1,
+          // x265 reports every frame's statistics on stderr otherwise.
+          "-x265-params",
+          "log-level=error",
+        ]
+      : [
+          "-c:v",
+          "libsvtav1",
+          ...common,
+          "-preset",
+          String(codecQuality.svtav1Preset),
+          "-crf",
+          String(codecQuality.svtav1Crf),
+          ...keyframes,
+        ];
+  }
   const fast = encode.clipSpeed === "fast";
   return [
     "-c:v",
@@ -108,131 +176,93 @@ export function codecArgs(
   ];
 }
 
+// What the join adds when it copies the clips: copying keeps the codec but not its MP4 tag.
+export function copyTag(encode: VideoEncode): readonly string[] {
+  return encode.kind === "x265" || (encode.kind === "nvenc" && encode.codec === "hevc") ? hvc1 : [];
+}
+
+// The ffmpeg that encodes the picture: the computer's own for NVENC and SVT-AV1, else the
+// bundled one.
+export function encoderBin(encode: VideoEncode, bundled: string): string {
+  return encode.kind === "nvenc" || encode.kind === "svtav1" ? encode.bin : bundled;
+}
+
 // Unavailable: `reason` is one plain sentence for a person, `detail` what the test printed (for
 // a bug report, shown folded in Settings).
 export type NvencStatus =
   | { readonly available: true; readonly bin: string }
   | { readonly available: false; readonly reason: string; readonly detail?: string };
 
-// Runs a program to its end and answers what it printed on stdout; throws when it fails.
-export type NvencExec = (bin: string, args: readonly string[]) => Promise<string>;
-
 // Said to a person who may have no NVIDIA card at all: stock ffmpeg builds list the NVIDIA
 // encoder everywhere, so a failed test usually means there is no card, not a broken one. What
 // the test printed goes under Details (`detail`), never into these sentences.
 export const noNvenc = "No NVIDIA graphics card was found on this computer.";
-export const failedNvenc = "No working NVIDIA graphics card was found on this computer.";
+export const noSvtAv1 = "No ffmpeg with SVT-AV1 (libsvtav1) was found on this computer.";
 
 // The reason with the test's output, for the log and a run's notice.
 export function nvencWhy(status: { readonly reason: string; readonly detail?: string }): string {
   return status.detail === undefined ? status.reason : `${status.reason} (${status.detail})`;
 }
 
-// The renders' own settings on a tiny picture: a driver or card that refuses any of them fails
-// here rather than in a render. NVENC refuses anything under about 145 pixels across.
-const testArgs = [
-  "-hide_banner",
-  "-nostdin",
-  "-loglevel",
-  "error",
-  "-f",
-  "lavfi",
-  "-i",
-  "color=c=black:s=256x256:r=30:d=0.1",
-  "-frames:v",
-  "1",
-  ...codecArgs({ kind: "nvenc", bin: "", clipSpeed: "thorough" }, "final", undefined),
-  "-f",
-  "null",
-  "-",
-];
+type Chosen = { readonly encode: VideoEncode; readonly notices: readonly string[] };
 
-// The filters a render runs in the NVENC ffmpeg besides the encoder.
-const neededFilters = ["zoompan", "perspective", "fillborders", "xfade", "ass"];
-
-// Which ffmpeg can encode on an NVIDIA card, asked once and remembered until Slopify restarts.
-// The bundled ffmpeg first, then the computer's own: unlike everything else, NVENC is the
-// computer's (its driver and its ffmpeg), and only used when chosen in Settings.
-export function createNvencProbe(deps: {
-  readonly candidates: readonly string[];
-  readonly exec: NvencExec;
-  readonly log: Log;
-}): () => Promise<NvencStatus> {
-  let answer: Promise<NvencStatus> | undefined;
-  return () => {
-    answer ??= probe(deps).catch((error: unknown) => ({
-      available: false as const,
-      reason: noNvenc,
-      detail: errorText(error),
-    }));
-    return answer;
-  };
-}
-
-async function probe(deps: {
-  readonly candidates: readonly string[];
-  readonly exec: NvencExec;
-  readonly log: Log;
-}): Promise<NvencStatus> {
-  let failed: string | undefined;
-  for (const bin of new Set(deps.candidates)) {
-    const encoders = await deps.exec(bin, ["-hide_banner", "-encoders"]).catch(() => "");
-    if (!/^\s*V\S*\s+h264_nvenc\s/m.test(encoders)) continue;
-    const filters = await deps.exec(bin, ["-hide_banner", "-filters"]).catch(() => "");
-    const missing = neededFilters.filter(
-      (name) => !new RegExp(`^\\s*\\S+\\s+${name}\\s`, "m").test(filters),
-    );
-    if (missing.length > 0) {
-      failed = `the ffmpeg at ${bin} has NVENC but not the ${missing.join(", ")} filter a video needs`;
-      continue;
-    }
-    try {
-      await deps.exec(bin, testArgs);
-      deps.log.write("info", "video.encoder", { detail: `NVENC works through ${bin}` });
-      return { available: true, bin };
-    } catch (error) {
-      failed = `the ffmpeg at ${bin} lists NVENC but its test encode failed: ${errorText(error)}`;
-    }
-  }
-  if (failed !== undefined) {
-    deps.log.write("info", "video.encoder", { detail: failed });
-    return { available: false, reason: failedNvenc, detail: failed };
-  }
-  return { available: false, reason: noNvenc };
-}
-
-// The render's machine settings, read as it starts. A card chosen but not working is a notice,
-// never a failed render: the processor encodes it instead.
+// The render's machine settings, read as it starts. An encoder or codec chosen but not working
+// is a notice, never a failed render: the processor encodes it instead, or H.264 does.
 export async function renderMachine(deps: {
   readonly settings: RenderSettings;
-  readonly nvenc: () => Promise<NvencStatus>;
+  // Whether the card encodes `codec`; H.264 when left out (`encoder-probe.ts`).
+  readonly nvenc: (codec?: VideoCodec) => Promise<NvencStatus>;
+  readonly svtav1?: (() => Promise<NvencStatus>) | undefined;
+  // The project's codec; shorts and the style preview leave it out and stay H.264.
+  readonly codec?: VideoCodec | undefined;
   readonly log: Log;
   readonly projectId?: string | undefined;
 }): Promise<{ readonly machine: RenderMachine; readonly notice?: string }> {
   const { settings } = deps;
-  const cpu: VideoEncode = { kind: "x264", clipSpeed: settings.clipEncodeSpeed };
-  if (settings.videoEncoder !== "nvidia")
-    return { machine: { encode: cpu, priority: settings.renderPriority } };
-  const status = await deps.nvenc();
-  if (status.available)
-    return {
-      machine: {
-        encode: { kind: "nvenc", bin: status.bin, clipSpeed: settings.clipEncodeSpeed },
-        priority: settings.renderPriority,
-      },
-    };
-  deps.log.write("warn", "video.encoder", {
-    projectId: deps.projectId,
-    detail: `NVIDIA encoder chosen but unavailable; encoding on the processor. ${nvencWhy(status)}`,
+  const codec = deps.codec ?? "h264";
+  const clipSpeed = settings.clipEncodeSpeed;
+  const warn = (detail: string): void =>
+    deps.log.write("warn", "video.encoder", { projectId: deps.projectId, detail });
+  const done = (chosen: Chosen) => ({
+    machine: { encode: chosen.encode, priority: settings.renderPriority },
+    ...(chosen.notices.length === 0 ? {} : { notice: chosen.notices.join(" ") }),
   });
-  return {
-    machine: { encode: cpu, priority: settings.renderPriority },
-    notice: nvencFallbackNotice(nvencWhy(status)),
+  const cpu = async (): Promise<Chosen> => {
+    if (codec === "h264") return { encode: { kind: "x264", clipSpeed }, notices: [] };
+    if (codec === "hevc") return { encode: { kind: "x265", clipSpeed }, notices: [] };
+    const svt = (await deps.svtav1?.()) ?? { available: false as const, reason: noSvtAv1 };
+    if (svt.available) return { encode: { kind: "svtav1", bin: svt.bin, clipSpeed }, notices: [] };
+    warn(`AV1 chosen but SVT-AV1 is unavailable; encoding H.264. ${nvencWhy(svt)}`);
+    return { encode: { kind: "x264", clipSpeed }, notices: [svtav1FallbackNotice(nvencWhy(svt))] };
   };
+  if (settings.videoEncoder !== "nvidia") return done(await cpu());
+  const card = await deps.nvenc();
+  if (!card.available) {
+    warn(`NVIDIA encoder chosen but unavailable; encoding on the processor. ${nvencWhy(card)}`);
+    const chosen = await cpu();
+    return done({
+      encode: chosen.encode,
+      notices: [nvencFallbackNotice(nvencWhy(card)), ...chosen.notices],
+    });
+  }
+  const h264 = { kind: "nvenc", bin: card.bin, clipSpeed } as const;
+  if (codec === "h264") return done({ encode: h264, notices: [] });
+  const own = await deps.nvenc(codec);
+  if (own.available) return done({ encode: { ...h264, bin: own.bin, codec }, notices: [] });
+  warn(`${videoCodecLabels[codec]} on the NVIDIA card is unavailable; encoding H.264 on it.`);
+  return done({ encode: h264, notices: [cardCodecNotice(codec, nvencWhy(own))] });
 }
 
 export function nvencFallbackNotice(reason: string): string {
   return `This video was encoded on the processor because the NVIDIA graphics card encoder didn't work (${reason.replace(/\.$/, "")}). Check the NVIDIA driver, or choose Processor (x264) in Settings → Production defaults → Video encoder.`;
+}
+
+export function svtav1FallbackNotice(reason: string): string {
+  return `This video was encoded as H.264 instead of AV1 because AV1 on the processor needs an ffmpeg with SVT-AV1 (${reason.replace(/\.$/, "")}). Install an ffmpeg built with SVT-AV1 and restart Slopify, or choose H.264 or HEVC under Video codec in the project's Video settings.`;
+}
+
+function cardCodecNotice(codec: VideoCodec, reason: string): string {
+  return `This video was encoded as H.264 on the NVIDIA graphics card because it couldn't encode ${videoCodecLabels[codec]} (${reason.replace(/\.$/, "")}). Choose H.264${codec === "av1" ? " or HEVC" : ""} under Video codec in the project's Video settings, or Processor in Settings → Production defaults → Video encoder.`;
 }
 
 // Background renders run below normal priority: nice 10 on Linux and macOS, the below-normal

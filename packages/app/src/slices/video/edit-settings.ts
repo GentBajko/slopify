@@ -31,6 +31,11 @@ export type Atmosphere = (typeof atmospheres)[number];
 export const animateModes = ["off", "chapters", "every"] as const;
 export type AnimateMode = (typeof animateModes)[number];
 
+// The finished video's codec. How it is encoded (processor or NVIDIA card) is the computer's
+// choice (`encoding.ts`); this is the project's, since it changes the file.
+export const videoCodecs = ["h264", "hevc", "av1"] as const;
+export type VideoCodec = (typeof videoCodecs)[number];
+
 export interface VideoEditSettings {
   readonly cuts: CutMode;
   readonly transition: TransitionKind;
@@ -47,6 +52,9 @@ export interface VideoEditSettings {
   readonly animateEvery: number;
   // The image-to-video model, on the project's image provider. Blank while Animate is off.
   readonly animateModel: string;
+  // Absent is H.264, what every video before it was; only a codec other than H.264 enters the
+  // render's fingerprint. Shorts and the style preview stay H.264 whatever it says.
+  readonly codec?: VideoCodec | undefined;
 }
 
 export const legacyVideoEdit: VideoEditSettings = {
@@ -124,6 +132,20 @@ export const animateModeLabels: Readonly<Record<AnimateMode, string>> = {
   chapters: "Chapter openers",
   every: "Every Nth image",
 };
+
+export const videoCodecLabels: Readonly<Record<VideoCodec, string>> = {
+  h264: "H.264",
+  hevc: "HEVC",
+  av1: "AV1",
+};
+export const videoCodecHelp =
+  "H.264 works everywhere (default). HEVC and AV1 make about half to a third of the file for the same picture; AV1 on the processor needs an ffmpeg with SVT-AV1 and renders slower.";
+
+export function videoCodecOf(config: {
+  readonly videoEdit?: Pick<VideoEditSettings, "codec"> | undefined;
+}): VideoCodec {
+  return config.videoEdit?.codec ?? "h264";
+}
 
 // The settings a project renders with: its own, or today's behaviour when it has none.
 export function videoEditOf(config: {
@@ -270,6 +292,7 @@ export function videoEditRows(
         ? animateModeLabels.off
         : `${edit.animate === "every" ? `Every ${nth(edit.animateEvery)} image` : animateModeLabels.chapters}${edit.animateModel.trim() === "" ? "" : ` · ${edit.animateModel}`}`,
     ],
+    ["Video codec", videoCodecLabels[edit.codec ?? "h264"]],
   ];
 }
 

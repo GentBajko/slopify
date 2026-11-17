@@ -7,6 +7,7 @@ import {
   usesAnimation,
   usesNarrationCuts,
   type VideoEditSettings,
+  videoCodecOf,
   videoEditProblems,
   videoEditRows,
 } from "./edit-settings.js";
@@ -95,6 +96,19 @@ describe("edit settings", () => {
       ["Atmosphere", "None"],
       ["Chapter cards", "Off"],
       ["Animate images", "Every 2nd image · kling"],
+      ["Video codec", "H.264"],
+    ]);
+  });
+});
+
+describe("the video codec", () => {
+  it("is H.264 when a project has none, and said by name in the change list", () => {
+    expect(videoCodecOf({})).toBe("h264");
+    expect(videoCodecOf({ videoEdit: legacyVideoEdit })).toBe("h264");
+    expect(videoCodecOf({ videoEdit: { ...legacyVideoEdit, codec: "av1" } })).toBe("av1");
+    expect(videoEditRows({ ...legacyVideoEdit, codec: "hevc" }).at(-1)).toEqual([
+      "Video codec",
+      "HEVC",
     ]);
   });
 });

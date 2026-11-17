@@ -7,6 +7,7 @@ import { bt709Frames, bt709Scale } from "./colour.js";
 import type { EditList, Shot, TransitionStyle } from "./edit-list.js";
 import {
   codecArgs,
+  copyTag,
   defaultEncode,
   type RenderPriority,
   setRenderPriority,
@@ -477,7 +478,9 @@ export function joinArgs(
     "-map",
     burnSubtitles ? "[v]" : "0:v",
     ...(audio ? ["-map", sound === undefined ? "[a]" : "1:a"] : []),
-    ...(burnSubtitles ? codecArgs(encode, "final", edit.look) : ["-c:v", "copy"]),
+    ...(burnSubtitles
+      ? codecArgs(encode, "final", edit.look)
+      : ["-c:v", "copy", ...copyTag(encode)]),
     ...(audio ? ["-c:a", sound === undefined ? "aac" : "copy"] : ["-an"]),
     "-movflags",
     "+faststart",

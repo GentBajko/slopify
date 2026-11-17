@@ -224,4 +224,12 @@ describe("the look in words", () => {
       }),
     ).toBe("a subtle vignette, a sepia grade, drifting fog and every 3rd image animated (paid)");
   });
+
+  it("names a codec other than H.264", () => {
+    expect(lookWords({ ...defaultVideoEdit, codec: "h264" })).toBe("no effects");
+    expect(lookWords({ ...defaultVideoEdit, codec: "av1" })).toBe("no effects, encoded as AV1");
+    expect(lookWords({ ...defaultVideoEdit, grade: "sepia", codec: "hevc" })).toBe(
+      "a sepia grade, encoded as HEVC",
+    );
+  });
 });

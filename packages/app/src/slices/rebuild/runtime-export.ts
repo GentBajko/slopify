@@ -14,6 +14,7 @@ import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/asse
 import { outputPath, projectDir, renderCacheDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
 import { withPaths } from "../video/edit-list.js";
+import { type VideoCodec, videoCodecOf } from "../video/edit-settings.js";
 import type { RenderMachine } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
@@ -39,9 +40,11 @@ export interface ExportExecutionDeps extends LocalExecutionDeps {
   readonly alignSubtitles?: SubtitleAligner | undefined;
   // Settings → Production defaults → Rendering, read once as each render starts
   // (`video/encoding.ts`); absent renders as before, x264 at normal priority.
+  // `codec` is the project's Video codec; shorts ask for H.264.
   readonly renderMachine?:
     | ((
         projectId: string,
+        codec: VideoCodec,
       ) => Promise<{ readonly machine: RenderMachine; readonly notice?: string | undefined }>)
     | undefined;
   // Settings → Production defaults → Videos rendered at once (`video/render-gate.ts`): the
@@ -53,12 +56,13 @@ export interface ExportExecutionDeps extends LocalExecutionDeps {
 export async function exportMachine(
   deps: ExportExecutionDeps,
   projectId: string,
+  codec: VideoCodec = "h264",
 ): Promise<{
   readonly machine: RenderMachine | undefined;
   readonly notices: string[];
   readonly notice: (sentence: string) => void;
 }> {
-  const chosen = await deps.renderMachine?.(projectId);
+  const chosen = await deps.renderMachine?.(projectId, codec);
   const notices = chosen?.notice === undefined ? [] : [chosen.notice];
   return {
     machine: chosen?.machine,
@@ -175,7 +179,11 @@ export async function executeExportRecipe(
               : { warnings: edited.warnings }),
           };
     if (!context.maySubmit(piece.id)) return "held";
-    const machine = await exportMachine(deps, context.work.projectId);
+    const machine = await exportMachine(
+      deps,
+      context.work.projectId,
+      plan === undefined ? "h264" : videoCodecOf(config),
+    );
     const priority = machine.machine?.priority;
     const onProgress = (elapsedMs: number): void =>
       context.emit({

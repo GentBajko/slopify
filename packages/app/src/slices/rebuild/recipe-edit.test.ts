@@ -105,6 +105,27 @@ describe("the edit settings", () => {
     }
   });
 
+  it("keep every fingerprint when the video codec is H.264, said or not", () => {
+    for (const c of [config, narrated, withShorts, captioned]) {
+      const before = fingerprints(c);
+      expect(fingerprints(edited(c, { codec: "h264" }))).toEqual(before);
+      expect(fingerprints({ ...c, videoEdit: { ...defaultVideoEdit, codec: "h264" } })).toEqual(
+        fingerprints({ ...c, videoEdit: defaultVideoEdit }),
+      );
+    }
+  });
+
+  it("re-render only the video when the codec changes to HEVC or AV1", () => {
+    const before = fingerprints(narrated);
+    const hevc = fingerprints(edited(narrated, { codec: "hevc" }));
+    const av1 = fingerprints(edited(narrated, { codec: "av1" }));
+    for (const after of [hevc, av1]) {
+      const changed = Object.keys(after).filter((key) => after[key] !== before[key]);
+      expect(changed).toEqual(["export:video"]);
+    }
+    expect(hevc["export:video"]).not.toBe(av1["export:video"]);
+  });
+
   it("time the words and wait for them when the cuts follow the narration", () => {
     const recipes = recipesFor(edited(narrated, { cuts: "narration" }));
     const video = recipes.find((one) => one.key === "export:video");

@@ -33,8 +33,10 @@ import {
 import type { EditList } from "./edit-list.js";
 import {
   defaultEncode,
+  encoderBin,
   nvencFallbackNotice,
   type RenderMachine,
+  svtav1FallbackNotice,
   type VideoEncode,
 } from "./encoding.js";
 import {
@@ -98,21 +100,28 @@ const leastPartFrames = 60 * 30;
 // The sound the join plays, as the join itself brings every segment to it.
 const masterFormat = { sampleRate: 44100, channels: 2 } as const;
 
-// What the master measured, when the run asked for one. A render on the NVIDIA card that fails
-// for any reason but a cancel is made again on the processor: the card never fails a render.
+// What the master measured, when the run asked for one. A render in the computer's own ffmpeg
+// (the NVIDIA card, SVT-AV1) that fails for any reason but a cancel is made again on the
+// processor with the bundled one: neither ever fails a render. The card's HEVC falls back to
+// x265; its AV1, like SVT-AV1's, to H.264, since the processor's AV1 needs that same ffmpeg.
 export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport | undefined> {
   const encode = run.machine?.encode ?? defaultEncode;
-  if (encode.kind !== "nvenc") return renderWith(run, encode);
+  if (encode.kind !== "nvenc" && encode.kind !== "svtav1") return renderWith(run, encode);
   try {
     return await renderWith(run, encode);
   } catch (error) {
     if (run.signal.aborted) throw error;
     const detail = errorText(error);
+    const card = encode.kind === "nvenc";
     run.log.write("warn", "video.encoder", {
-      detail: `the NVENC render failed; rendering again on the processor: ${detail}`,
+      detail: `the ${card ? "NVENC" : "SVT-AV1"} render failed; rendering again on the processor: ${detail}`,
     });
-    run.notice?.(nvencFallbackNotice(`it stopped the render: ${detail}`));
-    return renderWith(run, { kind: "x264", clipSpeed: encode.clipSpeed });
+    const why = `it stopped the render: ${detail}`;
+    run.notice?.(card ? nvencFallbackNotice(why) : svtav1FallbackNotice(why));
+    return renderWith(run, {
+      kind: card && encode.codec === "hevc" ? "x265" : "x264",
+      clipSpeed: encode.clipSpeed,
+    });
   }
 }
 
@@ -123,7 +132,7 @@ async function renderWith(
   const { edit } = run;
   const priority = run.machine?.priority;
   // The ffmpeg that encodes the picture; copying, sound and probing stay with the bundled one.
-  const encoder = encode.kind === "nvenc" ? encode.bin : run.bin;
+  const encoder = encoderBin(encode, run.bin);
   const distinct = slideshowClips(edit);
   // Captions are burned in one of two ways (`clip-captions.ts`): drawn by each clip's own run,
   // or over the joined clips in a second encode.

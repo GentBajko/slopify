@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { defaultVideoEdit, videoCodecs } from "../video/edit-settings.js";
 import { draftFixture } from "./draft.fake.js";
 import { playDraftDocumentSchema } from "./schema.js";
 
@@ -86,6 +87,29 @@ it("reads a draft saved before the video timing controls with their defaults", (
     expect(parsed.form.edgeSilenceSeconds).toBe("2");
     expect(parsed.form.zoomPercent).toBe("22.5");
     expect(parsed.form.motionStyle).toBe("zoom");
+  } finally {
+    h.close();
+  }
+});
+// A template is a saved draft (`project-templates/schema.ts`), so this is also what Save on the
+// template editor and the MCP's update_template accept.
+it("accepts the video codec in the video edit settings, and nothing but the three codecs", () => {
+  const h = draftFixture();
+  try {
+    const withCodec = (codec: unknown) => ({
+      ...h.document,
+      form: { ...h.document.form, videoEdit: { ...defaultVideoEdit, codec } },
+    });
+    for (const codec of videoCodecs)
+      expect(playDraftDocumentSchema.parse(withCodec(codec)).form.videoEdit?.codec).toBe(codec);
+    expect(playDraftDocumentSchema.safeParse(withCodec("vp9")).success).toBe(false);
+    // Absent is H.264, as every video before it was.
+    expect(
+      playDraftDocumentSchema.parse({
+        ...h.document,
+        form: { ...h.document.form, videoEdit: defaultVideoEdit },
+      }).form.videoEdit?.codec,
+    ).toBeUndefined();
   } finally {
     h.close();
   }

@@ -13,6 +13,7 @@ import {
   transitionLabels,
   usesNarrationCuts,
   type VideoEditSettings,
+  videoCodecLabels,
   videoEditOf,
 } from "@app/slices/video/edit-settings.js";
 import { voiceFormatLabels } from "@app/slices/voices/model.js";
@@ -403,7 +404,9 @@ export function lookWords(edit: VideoEditSettings): string {
         ? `every ${edit.animateEvery === 2 ? "2nd" : edit.animateEvery === 3 ? "3rd" : `${String(edit.animateEvery)}th`} image animated (paid)`
         : "chapter openers animated (paid)",
   ].filter((part) => part !== undefined);
-  return parts.length === 0 ? "no effects" : listed(parts);
+  const look = parts.length === 0 ? "no effects" : listed(parts);
+  const codec = edit.codec ?? "h264";
+  return codec === "h264" ? look : `${look}, encoded as ${videoCodecLabels[codec]}`;
 }
 
 function capitalised(text: string): string {

@@ -19,6 +19,7 @@ import {
   cutModes,
   lookLevels,
   transitionKinds,
+  videoCodecs,
 } from "../video/edit-settings.js";
 import { voicesSettingsSchema } from "../voices/model.js";
 import {
@@ -55,6 +56,8 @@ export const videoEditSchema = z.object({
   animate: z.enum(animateModes),
   animateEvery: z.number(),
   animateModel: z.string(),
+  // Absent is H.264 (`video/edit-settings.ts`).
+  codec: z.enum(videoCodecs).optional(),
 });
 
 // The shape Play posts and the shape `projects.config` holds, in one place: the second

@@ -16,7 +16,8 @@ import { promisify } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it, vi } from "vitest";
 import type { EditList } from "./edit-list.js";
-import { createNvencProbe } from "./encoding.js";
+import { createNvencProbe, createSvtAv1Probe } from "./encoder-probe.js";
+import type { VideoEncode } from "./encoding.js";
 import { resolveFfmpeg } from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
@@ -575,6 +576,122 @@ describe("renderSlideshow on the NVIDIA card", () => {
     },
     60_000,
   );
+});
+
+// The computer's SVT-AV1, when it has one: the same probe a render uses.
+const svtav1 = await createSvtAv1Probe({
+  candidates: [resolveFfmpeg(process.env, ffmpegStatic), "ffmpeg", "/usr/bin/ffmpeg"],
+  exec: async (bin, args) =>
+    (await promisify(execFile)(bin, [...args], { timeout: 20_000 })).stdout.toString(),
+  log,
+})();
+const cardAv1 = await createNvencProbe({
+  candidates: [resolveFfmpeg(process.env, ffmpegStatic), "ffmpeg", "/usr/bin/ffmpeg"],
+  exec: async (bin, args) =>
+    (await promisify(execFile)(bin, [...args], { timeout: 20_000 })).stdout.toString(),
+  log,
+})("av1");
+
+describe("renderSlideshow in HEVC and AV1", () => {
+  const still = (scratch: string): string => {
+    const path = join(scratch, "still.ppm");
+    writeFileSync(
+      path,
+      Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 90)]),
+    );
+    return path;
+  };
+  const render = async (
+    encode: VideoEncode,
+    burn: boolean,
+  ): Promise<{ readonly codec: string | undefined; readonly notices: readonly string[] }> => {
+    const scratch = mkdtempSync(join(tmpdir(), "slopify-slideshow-"));
+    try {
+      writeFileSync(
+        join(scratch, "subtitles.ass"),
+        "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n",
+      );
+      mkdirSync(join(scratch, "fonts"));
+      const output = join(scratch, "out.mp4");
+      const notices: string[] = [];
+      await renderSlideshow({
+        bin: resolveFfmpeg(process.env, ffmpegStatic),
+        ...plan({
+          imageSeconds: 1,
+          images: [still(scratch), still(scratch)],
+          body: undefined,
+          output,
+        }),
+        burnSubtitles: burn,
+        cwd: scratch,
+        scratch,
+        machine: { encode, priority: "background" },
+        notice: (sentence) => notices.push(sentence),
+        signal: new AbortController().signal,
+        log,
+        onProgress: (): void => {},
+      });
+      const decoded = spawnSync(resolveFfmpeg(process.env, ffmpegStatic), [
+        ...["-hide_banner", "-v", "error", "-i", output, "-f", "null", "-"],
+      ]);
+      expect(decoded.status).toBe(0);
+      expect(decoded.stderr.toString()).toBe("");
+      const info = spawnSync(resolveFfmpeg(process.env, ffmpegStatic), [
+        ...["-hide_banner", "-i", output],
+      ]).stderr.toString();
+      return { codec: /Video: (\w+)/.exec(info)?.[1], notices };
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  };
+
+  it.each([false, true])(
+    "encodes HEVC with the bundled x265 (captions burned in: %s)",
+    async (burn) => {
+      const made = await render({ kind: "x265", clipSpeed: "thorough" }, burn);
+      expect(made).toEqual({ codec: "hevc", notices: [] });
+    },
+    60_000,
+  );
+
+  it.skipIf(!svtav1.available).each([false, true])(
+    "encodes AV1 with the computer's SVT-AV1 (captions burned in: %s)",
+    async (burn) => {
+      const bin = svtav1.available ? svtav1.bin : "";
+      const made = await render({ kind: "svtav1", bin, clipSpeed: "thorough" }, burn);
+      expect(made).toEqual({ codec: "av1", notices: [] });
+    },
+    60_000,
+  );
+
+  it.skipIf(!cardAv1.available).each(["hevc", "av1"] as const)(
+    "encodes %s on the NVIDIA card",
+    async (codec) => {
+      const bin = cardAv1.available ? cardAv1.bin : "";
+      const made = await render({ kind: "nvenc", bin, clipSpeed: "thorough", codec }, true);
+      expect(made).toEqual({ codec, notices: [] });
+    },
+    60_000,
+  );
+
+  it("renders H.264 on the processor with a notice when the SVT-AV1 ffmpeg fails", async () => {
+    const made = await render(
+      { kind: "svtav1", bin: "/nonexistent/ffmpeg", clipSpeed: "thorough" },
+      false,
+    );
+    expect(made.codec).toBe("h264");
+    expect(made.notices).toHaveLength(1);
+    expect(made.notices[0]).toMatch(/H\.264 instead of AV1/);
+  }, 30_000);
+
+  it("renders HEVC on the processor when the card's HEVC fails mid-render", async () => {
+    const made = await render(
+      { kind: "nvenc", bin: "/nonexistent/ffmpeg", clipSpeed: "thorough", codec: "hevc" },
+      false,
+    );
+    expect(made.codec).toBe("hevc");
+    expect(made.notices[0]).toMatch(/encoded on the processor/);
+  }, 30_000);
 });
 
 describe("burnParts", () => {

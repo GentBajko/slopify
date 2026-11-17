@@ -183,12 +183,9 @@ import {
 } from "./slices/template-studio/schedule-gate.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
-import {
-  createNvencProbe,
-  type NvencStatus,
-  noNvenc,
-  renderMachine,
-} from "./slices/video/encoding.js";
+import type { VideoCodec } from "./slices/video/edit-settings.js";
+import { createNvencProbe, createSvtAv1Probe } from "./slices/video/encoder-probe.js";
+import { type NvencStatus, noNvenc, noSvtAv1, renderMachine } from "./slices/video/encoding.js";
 import { probeDurationMs, runFfmpegAt } from "./slices/video/ffmpeg.js";
 import { createRenderGate, type RenderGate } from "./slices/video/render-gate.js";
 import { watchActivation } from "./updater/candidate.js";
@@ -377,6 +374,13 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       exec: ffmpegOutput,
       log,
     });
+    // A project's Video codec AV1 on the processor: the bundled ffmpeg has no SVT-AV1, so the
+    // computer's own is asked, once, when a render first needs it.
+    const svtav1 = createSvtAv1Probe({
+      candidates: [ffmpeg, "ffmpeg", "/usr/bin/ffmpeg"],
+      exec: ffmpegOutput,
+      log,
+    });
     // Settings → Production defaults → Render priority for the ffmpeg work outside a project's
     // render (Template Studio's samples, designs' drawing, posts' pictures), read as each starts.
     const renderPriority = () => readSettings({ db: runtimeDb, log }).renderPriority;
@@ -479,6 +483,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       catalogue,
       ffmpeg,
       nvenc,
+      svtav1,
       audioPreviews,
     });
     const updateDb = db;
@@ -1228,8 +1233,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
 interface Wiring {
   readonly audioPreviews: AudioPreviewStore;
   readonly ffmpeg: string;
-  // Whether this computer's NVIDIA encoder works; absent is that it has none.
-  readonly nvenc?: (() => Promise<NvencStatus>) | undefined;
+  // Whether this computer's NVIDIA encoder works, for a codec; absent is that it has none.
+  readonly nvenc?: ((codec?: VideoCodec) => Promise<NvencStatus>) | undefined;
+  // Whether this computer has an ffmpeg with SVT-AV1; absent is that it has none.
+  readonly svtav1?: (() => Promise<NvencStatus>) | undefined;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly clock: Clock;
@@ -1262,6 +1269,7 @@ export function wireRunner({
   catalogue,
   ffmpeg,
   nvenc = async () => ({ available: false, reason: noNvenc }),
+  svtav1 = async () => ({ available: false, reason: noSvtAv1 }),
   // Settings → Production defaults → Subtitle timing model, read as each alignment starts.
   alignSubtitles: aligner = alignSubtitlesWith(() => readSettings({ db, log }).subtitleModel),
   // Settings → Production defaults → Videos rendered at once, read as each render asks for its
@@ -1284,8 +1292,8 @@ export function wireRunner({
     ffmpeg,
     alignSubtitles: aligner,
     // Settings → Production defaults → Rendering, read as each render starts.
-    renderMachine: (projectId: string) =>
-      renderMachine({ settings: readSettings({ db, log }), nvenc, log, projectId }),
+    renderMachine: (projectId: string, codec?: VideoCodec) =>
+      renderMachine({ settings: readSettings({ db, log }), nvenc, svtav1, codec, log, projectId }),
     // One queue for every render this computer makes, so a second video waits rather than
     // taking the processor and memory the first one and the page are using.
     renderGate,

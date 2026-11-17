@@ -24,7 +24,11 @@ import {
   transitionKinds,
   transitionLabels,
   transitionSecondsSteps,
+  type VideoCodec,
   type VideoEditSettings,
+  videoCodecHelp,
+  videoCodecLabels,
+  videoCodecs,
 } from "@app/slices/video/edit-settings.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
@@ -59,7 +63,7 @@ export function useVideoEditControls({
   readonly problem?: ((field: string) => string | undefined) | undefined;
   readonly onChange: (next: VideoEditSettings) => void;
   readonly fieldPrefix?: string;
-}): { readonly cuts: ReactElement; readonly look: ReactElement } {
+}): { readonly cuts: ReactElement; readonly look: ReactElement; readonly codec: ReactElement } {
   const id = useId();
   const edit = value ?? legacyVideoEdit;
   const set = (next: Partial<VideoEditSettings>): void => onChange({ ...edit, ...next });
@@ -280,7 +284,23 @@ export function useVideoEditControls({
       </div>
     </Fold>
   );
-  return { cuts, look };
+  // H.264 is stored as no codec at all, so a project switched back saves what it had.
+  const codec = (
+    <Row id={`${id}-codec`} label="Video codec" help={videoCodecHelp}>
+      <Choice
+        id={`${id}-codec`}
+        field={`${fieldPrefix}.codec`}
+        value={edit.codec ?? "h264"}
+        options={videoCodecs}
+        labels={videoCodecLabels}
+        onChange={(next: VideoCodec) => {
+          const { codec: _old, ...rest } = edit;
+          onChange(next === "h264" ? rest : { ...rest, codec: next });
+        }}
+      />
+    </Row>
+  );
+  return { cuts, look, codec };
 }
 
 function Row({

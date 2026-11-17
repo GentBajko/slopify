@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import { usesYoutubeDescription } from "../admission/rules.js";
+import { usesShortMode } from "../admission/short-mode.js";
 import { headingChapters, type TimedChapter, topHeadings } from "../video/chapters.js";
 import { chapterOpeningShots, sentenceCutPoints } from "../video/cuts.js";
 import {
@@ -12,6 +13,7 @@ import {
   usesAnimation,
   usesChapterCards,
   usesNarrationCuts,
+  videoCodecOf,
   videoEditOf,
 } from "../video/edit-settings.js";
 import { fps } from "../video/plan.js";
@@ -69,6 +71,10 @@ export function editPlan(
     edit.atmosphere !== "none"
   )
     values.push(["look-v1", edit.vignette, edit.grain, edit.grade, edit.atmosphere]);
+  // H.264 adds nothing, so a project without a codec keeps its fingerprint. A short-mode
+  // project renders as a short, which stays H.264.
+  const codec = videoCodecOf(config);
+  if (codec !== "h264" && !usesShortMode(config)) values.push(["codec", codec]);
   if (usesChapterCards(config)) values.push(["cards-v1", config.subtitles?.fontId ?? "default"]);
   // The brand kit's end screen and title style; nothing when unset, so a project without them
   // keeps its export fingerprint.

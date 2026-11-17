@@ -489,6 +489,7 @@ export function RevisionForm(
               </Field>
               <div className="space-y-4 md:col-span-2">
                 {videoEdit.cuts}
+                {videoEdit.codec}
                 {videoEdit.look}
                 {config.sources.audio === "generate" && config.audio?.describeFigures === true ? (
                   <ShowFiguresToggle

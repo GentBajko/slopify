@@ -323,6 +323,7 @@ export function ImagesAndCuts({
           )}
         </LabelledField>
         {edit.cuts}
+        {edit.codec}
       </div>
       {edit.look}
       {form.sources.audio !== "off" ? (
