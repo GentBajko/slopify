@@ -31,6 +31,10 @@ Motion takes turns so a long video stays watchable. Zoom goes in, out, in. Pan g
 
 New projects default to **Follow the narration**. It needs word timing, so it works in English and the languages that have it; in other languages the picker is fixed to Every N seconds and a note says why. See [Other Languages](Other-Languages).
 
+## Video codec
+
+**Video codec** sits under Cuts: **H.264** (the default, works everywhere), **HEVC** or **AV1**. HEVC and AV1 make about half to a third of the file for the same picture; AV1 on the processor needs an ffmpeg with SVT-AV1 on the computer and renders slower. It combines with **Settings → Production defaults → Video encoder**, and falls back to H.264 with a note in the Video part when the computer can't encode it. Changing it outdates only the video. Shorts stay H.264. See [Video and style](Create-Video-and-Style#video-codec).
+
 ## The Look
 
 **Look** is a folding row under Cuts. Its summary line lists what is on, or "Plain cuts, no effects".

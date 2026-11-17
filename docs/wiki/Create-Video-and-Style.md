@@ -63,6 +63,18 @@ After the run, you can fix a misheard word or nudge a caption's timing on the pr
 
 Turning on **More images for long videos** in the Images row switches **Motion** from Zoom to **Mix of both**. See [Images](Create-Images#more-images-for-long-videos).
 
+## Video codec
+
+**Video codec** sits beside **Cuts** and decides the format of the finished video file. It is saved with the project or template.
+
+| Choice | What it does |
+| --- | --- |
+| **H.264** | Works everywhere: every player, browser and upload site. The default, and what every video was before. |
+| **HEVC** | About half to three fifths of the file for the same picture. On the processor it is x265, from Slopify's own ffmpeg; on an NVIDIA card, the card's HEVC encoder. |
+| **AV1** | The smallest file: about 29% of the H.264 one on the processor, about 44% on an NVIDIA card, for the same picture (measured on a 1080p video). On the processor it needs an ffmpeg with SVT-AV1 on the computer (the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) and renders slower. |
+
+Whether the processor or the NVIDIA card encodes it is **Settings → Production defaults → Video encoder**. If AV1 is chosen and no ffmpeg with SVT-AV1 is found, or the card can't encode the chosen codec, the video is made as H.264 and its Video part says why; the video is never failed for it. Shorts and the style preview are always H.264. Changing the codec makes only the video again.
+
 ## The Look
 
 **Look** is a fold in the row. Folded, its line lists what is on (for example **Crossfade 2 s · Warm fantasy · Fog · Vignette**). Everything in it is drawn on this computer at no cost; only animated images are charged, by the image service.
