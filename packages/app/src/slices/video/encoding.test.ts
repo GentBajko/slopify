@@ -423,6 +423,111 @@ describe("renderMachine with a codec", () => {
   });
 });
 
+describe("renderMachine on Automatic", () => {
+  const settings = (videoEncoder: "cpu" | "nvidia") =>
+    ({
+      videoEncoder,
+      clipEncodeSpeed: "thorough",
+      renderPriority: "normal",
+      videoRenderConcurrency: 1,
+    }) as const;
+  const bin = "/usr/bin/ffmpeg";
+  const card = async () => ({ available: true as const, bin });
+  const cardWithoutAv1 = async (codec?: string) =>
+    codec === "av1"
+      ? { available: false as const, reason: "This NVIDIA graphics card can't encode AV1." }
+      : { available: true as const, bin };
+  const noCard = async () => ({ available: false as const, reason: noNvenc });
+
+  it.each(["cpu", "nvidia"] as const)(
+    "encodes AV1 on the card whenever it can, whatever the Video encoder (%s), H.264 as before should it fail",
+    async (encoder) => {
+      const asked: unknown[] = [];
+      const result = await renderMachine({
+        settings: settings(encoder),
+        nvenc: async (codec) => {
+          asked.push(codec);
+          return card();
+        },
+        codec: "auto",
+        log: log(),
+      });
+      expect(result).toEqual({
+        machine: {
+          encode: { kind: "nvenc", bin, clipSpeed: "thorough", codec: "av1" },
+          priority: "normal",
+          fallback:
+            encoder === "cpu"
+              ? { kind: "x264", clipSpeed: "thorough" }
+              : { kind: "nvenc", bin, clipSpeed: "thorough" },
+        },
+      });
+      expect(asked).toContain("av1");
+    },
+  );
+
+  it("renders exactly as today, with no notice, when there is no card", async () => {
+    const result = await renderMachine({
+      settings: settings("cpu"),
+      nvenc: noCard,
+      codec: "auto",
+      log: log(),
+    });
+    expect(result).toEqual({
+      machine: { encode: { kind: "x264", clipSpeed: "thorough" }, priority: "normal" },
+    });
+  });
+
+  it("renders exactly as today, with no notice, when the card can't encode AV1", async () => {
+    const result = await renderMachine({
+      settings: settings("nvidia"),
+      nvenc: cardWithoutAv1,
+      codec: "auto",
+      log: log(),
+    });
+    expect(result).toEqual({
+      machine: { encode: { kind: "nvenc", bin, clipSpeed: "thorough" }, priority: "normal" },
+    });
+    const cpu = await renderMachine({
+      settings: settings("cpu"),
+      nvenc: cardWithoutAv1,
+      codec: "auto",
+      log: log(),
+    });
+    expect(cpu).toEqual({
+      machine: { encode: { kind: "x264", clipSpeed: "thorough" }, priority: "normal" },
+    });
+  });
+
+  it("keeps today's notice when the card is chosen in Settings but doesn't work", async () => {
+    const result = await renderMachine({
+      settings: settings("nvidia"),
+      nvenc: noCard,
+      codec: "auto",
+      log: log(),
+    });
+    expect(result.machine.encode).toEqual({ kind: "x264", clipSpeed: "thorough" });
+    expect(result.notice).toMatch(/encoded on the processor/);
+  });
+
+  it("never asks the card for AV1 when H.264 is chosen, or for shorts that name no codec", async () => {
+    for (const codec of ["h264", undefined] as const) {
+      const asked: unknown[] = [];
+      const result = await renderMachine({
+        settings: settings("cpu"),
+        nvenc: async (one) => {
+          asked.push(one);
+          return card();
+        },
+        codec,
+        log: log(),
+      });
+      expect(result.machine.encode).toEqual({ kind: "x264", clipSpeed: "thorough" });
+      expect(asked).toEqual([]);
+    }
+  });
+});
+
 describe("setRenderPriority", () => {
   it("leaves a normal-priority run alone", () => {
     const calls: number[][] = [];

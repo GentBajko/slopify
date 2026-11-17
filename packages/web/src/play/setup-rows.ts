@@ -405,8 +405,8 @@ export function lookWords(edit: VideoEditSettings): string {
         : "chapter openers animated (paid)",
   ].filter((part) => part !== undefined);
   const look = parts.length === 0 ? "no effects" : listed(parts);
-  const codec = edit.codec ?? "h264";
-  return codec === "h264" ? look : `${look}, encoded as ${videoCodecLabels[codec]}`;
+  // Automatic goes unsaid, as every other default does.
+  return edit.codec === undefined ? look : `${look}, encoded as ${videoCodecLabels[edit.codec]}`;
 }
 
 function capitalised(text: string): string {

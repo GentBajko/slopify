@@ -32,9 +32,13 @@ export const animateModes = ["off", "chapters", "every"] as const;
 export type AnimateMode = (typeof animateModes)[number];
 
 // The finished video's codec. How it is encoded (processor or NVIDIA card) is the computer's
-// choice (`encoding.ts`); this is the project's, since it changes the file.
+// choice (`encoding.ts`); this is the project's, since it changes the file. The stored values
+// are the explicit choices; no value at all is Automatic: AV1 on an NVIDIA card that can
+// encode it, else H.264 exactly as before.
 export const videoCodecs = ["h264", "hevc", "av1"] as const;
 export type VideoCodec = (typeof videoCodecs)[number];
+export const videoCodecChoices = ["auto", ...videoCodecs] as const;
+export type VideoCodecChoice = (typeof videoCodecChoices)[number];
 
 export interface VideoEditSettings {
   readonly cuts: CutMode;
@@ -52,8 +56,9 @@ export interface VideoEditSettings {
   readonly animateEvery: number;
   // The image-to-video model, on the project's image provider. Blank while Animate is off.
   readonly animateModel: string;
-  // Absent is H.264, what every video before it was; only a codec other than H.264 enters the
-  // render's fingerprint. Shorts and the style preview stay H.264 whatever it says.
+  // Absent is Automatic. Only HEVC and AV1 enter the render's fingerprint, so a project without
+  // one, or set to H.264, keeps its fingerprint. Shorts and the style preview stay H.264
+  // whatever it says.
   readonly codec?: VideoCodec | undefined;
 }
 
@@ -133,18 +138,19 @@ export const animateModeLabels: Readonly<Record<AnimateMode, string>> = {
   every: "Every Nth image",
 };
 
-export const videoCodecLabels: Readonly<Record<VideoCodec, string>> = {
+export const videoCodecLabels: Readonly<Record<VideoCodecChoice, string>> = {
+  auto: "Automatic (AV1 on the graphics card, else H.264)",
   h264: "H.264",
   hevc: "HEVC",
   av1: "AV1",
 };
 export const videoCodecHelp =
-  "H.264 works everywhere (default). HEVC and AV1 make about half to a third of the file for the same picture; AV1 on the processor needs an ffmpeg with SVT-AV1 and renders slower.";
+  "Automatic uses AV1 on an NVIDIA card that can encode it, else H.264. H.264 works everywhere. HEVC and AV1 make about half to a third of the file for the same picture; AV1 on the processor needs an ffmpeg with SVT-AV1 and renders slower.";
 
 export function videoCodecOf(config: {
   readonly videoEdit?: Pick<VideoEditSettings, "codec"> | undefined;
-}): VideoCodec {
-  return config.videoEdit?.codec ?? "h264";
+}): VideoCodecChoice {
+  return config.videoEdit?.codec ?? "auto";
 }
 
 // The settings a project renders with: its own, or today's behaviour when it has none.
@@ -292,7 +298,7 @@ export function videoEditRows(
         ? animateModeLabels.off
         : `${edit.animate === "every" ? `Every ${nth(edit.animateEvery)} image` : animateModeLabels.chapters}${edit.animateModel.trim() === "" ? "" : ` · ${edit.animateModel}`}`,
     ],
-    ["Video codec", videoCodecLabels[edit.codec ?? "h264"]],
+    ["Video codec", videoCodecLabels[edit.codec ?? "auto"]],
   ];
 }
 

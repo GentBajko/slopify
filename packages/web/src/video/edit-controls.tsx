@@ -24,11 +24,11 @@ import {
   transitionKinds,
   transitionLabels,
   transitionSecondsSteps,
-  type VideoCodec,
+  type VideoCodecChoice,
   type VideoEditSettings,
+  videoCodecChoices,
   videoCodecHelp,
   videoCodecLabels,
-  videoCodecs,
 } from "@app/slices/video/edit-settings.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
@@ -284,18 +284,18 @@ export function useVideoEditControls({
       </div>
     </Fold>
   );
-  // H.264 is stored as no codec at all, so a project switched back saves what it had.
+  // Automatic is stored as no codec at all, so a project switched back saves what it had.
   const codec = (
     <Row id={`${id}-codec`} label="Video codec" help={videoCodecHelp}>
       <Choice
         id={`${id}-codec`}
         field={`${fieldPrefix}.codec`}
-        value={edit.codec ?? "h264"}
-        options={videoCodecs}
+        value={edit.codec ?? "auto"}
+        options={videoCodecChoices}
         labels={videoCodecLabels}
-        onChange={(next: VideoCodec) => {
+        onChange={(next: VideoCodecChoice) => {
           const { codec: _old, ...rest } = edit;
-          onChange(next === "h264" ? rest : { ...rest, codec: next });
+          onChange(next === "auto" ? rest : { ...rest, codec: next });
         }}
       />
     </Row>

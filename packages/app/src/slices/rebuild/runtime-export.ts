@@ -14,7 +14,7 @@ import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/asse
 import { outputPath, projectDir, renderCacheDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
 import { withPaths } from "../video/edit-list.js";
-import { type VideoCodec, videoCodecOf } from "../video/edit-settings.js";
+import { type VideoCodecChoice, videoCodecOf } from "../video/edit-settings.js";
 import type { RenderMachine } from "../video/encoding.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
@@ -44,7 +44,7 @@ export interface ExportExecutionDeps extends LocalExecutionDeps {
   readonly renderMachine?:
     | ((
         projectId: string,
-        codec: VideoCodec,
+        codec: VideoCodecChoice,
       ) => Promise<{ readonly machine: RenderMachine; readonly notice?: string | undefined }>)
     | undefined;
   // Settings → Production defaults → Videos rendered at once (`video/render-gate.ts`): the
@@ -56,7 +56,7 @@ export interface ExportExecutionDeps extends LocalExecutionDeps {
 export async function exportMachine(
   deps: ExportExecutionDeps,
   projectId: string,
-  codec: VideoCodec = "h264",
+  codec: VideoCodecChoice = "h264",
 ): Promise<{
   readonly machine: RenderMachine | undefined;
   readonly notices: string[];

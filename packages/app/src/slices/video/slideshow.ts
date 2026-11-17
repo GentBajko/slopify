@@ -106,6 +106,21 @@ const masterFormat = { sampleRate: 44100, channels: 2 } as const;
 // x265; its AV1, like SVT-AV1's, to H.264, since the processor's AV1 needs that same ffmpeg.
 export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport | undefined> {
   const encode = run.machine?.encode ?? defaultEncode;
+  const fallback = run.machine?.fallback;
+  // Automatic's card AV1: today's H.264 render takes over, without a notice, which keeps its
+  // own way of recovering from a card that fails.
+  if (fallback !== undefined && run.machine !== undefined) {
+    try {
+      return await renderWith(run, encode);
+    } catch (error) {
+      if (run.signal.aborted) throw error;
+      run.log.write("warn", "video.encoder", {
+        detail: `the automatic AV1 render on the card failed; rendering H.264 as before: ${errorText(error)}`,
+      });
+      const { fallback: _used, ...machine } = run.machine;
+      return renderSlideshow({ ...run, machine: { ...machine, encode: fallback } });
+    }
+  }
   if (encode.kind !== "nvenc" && encode.kind !== "svtav1") return renderWith(run, encode);
   try {
     return await renderWith(run, encode);

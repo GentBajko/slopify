@@ -71,10 +71,12 @@ export function editPlan(
     edit.atmosphere !== "none"
   )
     values.push(["look-v1", edit.vignette, edit.grain, edit.grade, edit.atmosphere]);
-  // H.264 adds nothing, so a project without a codec keeps its fingerprint. A short-mode
-  // project renders as a short, which stays H.264.
+  // Automatic and H.264 add nothing, so a project without a codec keeps its fingerprint: the
+  // next time it is made it simply comes out AV1 where the card can. A short-mode project
+  // renders as a short, which stays H.264.
   const codec = videoCodecOf(config);
-  if (codec !== "h264" && !usesShortMode(config)) values.push(["codec", codec]);
+  if ((codec === "hevc" || codec === "av1") && !usesShortMode(config))
+    values.push(["codec", codec]);
   if (usesChapterCards(config)) values.push(["cards-v1", config.subtitles?.fontId ?? "default"]);
   // The brand kit's end screen and title style; nothing when unset, so a project without them
   // keeps its export fingerprint.

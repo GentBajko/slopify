@@ -3,7 +3,7 @@ import { errorText } from "../../kernel/errors.js";
 import type { Log } from "../../kernel/log.js";
 import { bt709Tags } from "./colour.js";
 import type { Look } from "./edit-list.js";
-import { type VideoCodec, videoCodecLabels } from "./edit-settings.js";
+import { type VideoCodec, type VideoCodecChoice, videoCodecLabels } from "./edit-settings.js";
 import { lookEncoding } from "./look.js";
 
 // Settings → Production defaults → Rendering: how this computer encodes a video's picture.
@@ -47,6 +47,9 @@ export type VideoEncode =
 export interface RenderMachine {
   readonly encode: VideoEncode;
   readonly priority: RenderPriority;
+  // Automatic's card AV1 only: what the render is made with, without a notice, should the card
+  // fail mid-render. It is today's H.264 render.
+  readonly fallback?: VideoEncode;
 }
 
 // Today's render: x264 at its default preset, at normal priority.
@@ -206,20 +209,49 @@ export function nvencWhy(status: { readonly reason: string; readonly detail?: st
 
 type Chosen = { readonly encode: VideoEncode; readonly notices: readonly string[] };
 
-// The render's machine settings, read as it starts. An encoder or codec chosen but not working
-// is a notice, never a failed render: the processor encodes it instead, or H.264 does.
-export async function renderMachine(deps: {
+interface MachineDeps {
   readonly settings: RenderSettings;
   // Whether the card encodes `codec`; H.264 when left out (`encoder-probe.ts`).
   readonly nvenc: (codec?: VideoCodec) => Promise<NvencStatus>;
   readonly svtav1?: (() => Promise<NvencStatus>) | undefined;
   // The project's codec; shorts and the style preview leave it out and stay H.264.
-  readonly codec?: VideoCodec | undefined;
+  readonly codec?: VideoCodecChoice | undefined;
   readonly log: Log;
   readonly projectId?: string | undefined;
-}): Promise<{ readonly machine: RenderMachine; readonly notice?: string }> {
-  const { settings } = deps;
-  const codec = deps.codec ?? "h264";
+}
+
+// The render's machine settings, read as it starts. Automatic is AV1 on the NVIDIA card
+// whenever the card can encode it, whatever the Video encoder says, with today's H.264 as its
+// `fallback`; without such a card it is today's H.264 render, said nowhere, since that is the
+// ordinary way. An explicit encoder or codec chosen but not working is a notice, never a
+// failed render: the processor encodes it instead, or H.264 does.
+export async function renderMachine(
+  deps: MachineDeps,
+): Promise<{ readonly machine: RenderMachine; readonly notice?: string }> {
+  if (deps.codec !== "auto") return chosenMachine({ ...deps, codec: deps.codec ?? "h264" });
+  const today = await chosenMachine({ ...deps, codec: "h264" });
+  const card = await deps.nvenc();
+  if (!card.available) return today;
+  const av1 = await deps.nvenc("av1");
+  if (!av1.available) return today;
+  return {
+    machine: {
+      encode: {
+        kind: "nvenc",
+        bin: av1.bin,
+        clipSpeed: deps.settings.clipEncodeSpeed,
+        codec: "av1",
+      },
+      priority: deps.settings.renderPriority,
+      fallback: today.machine.encode,
+    },
+  };
+}
+
+async function chosenMachine(
+  deps: MachineDeps & { readonly codec: VideoCodec },
+): Promise<{ readonly machine: RenderMachine; readonly notice?: string }> {
+  const { settings, codec } = deps;
   const clipSpeed = settings.clipEncodeSpeed;
   const warn = (detail: string): void =>
     deps.log.write("warn", "video.encoder", { projectId: deps.projectId, detail });

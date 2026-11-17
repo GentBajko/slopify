@@ -56,7 +56,7 @@ export const videoEditSchema = z.object({
   animate: z.enum(animateModes),
   animateEvery: z.number(),
   animateModel: z.string(),
-  // Absent is H.264 (`video/edit-settings.ts`).
+  // Absent is Automatic (`video/edit-settings.ts`).
   codec: z.enum(videoCodecs).optional(),
 });
 

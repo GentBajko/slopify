@@ -183,7 +183,7 @@ import {
 } from "./slices/template-studio/schedule-gate.js";
 import { createPriceCache } from "./slices/template-studio/service.js";
 import { createTrashPurge } from "./slices/trash/service.js";
-import type { VideoCodec } from "./slices/video/edit-settings.js";
+import type { VideoCodec, VideoCodecChoice } from "./slices/video/edit-settings.js";
 import { createNvencProbe, createSvtAv1Probe } from "./slices/video/encoder-probe.js";
 import { type NvencStatus, noNvenc, noSvtAv1, renderMachine } from "./slices/video/encoding.js";
 import { probeDurationMs, runFfmpegAt } from "./slices/video/ffmpeg.js";
@@ -1292,7 +1292,7 @@ export function wireRunner({
     ffmpeg,
     alignSubtitles: aligner,
     // Settings → Production defaults → Rendering, read as each render starts.
-    renderMachine: (projectId: string, codec?: VideoCodec) =>
+    renderMachine: (projectId: string, codec?: VideoCodecChoice) =>
       renderMachine({ settings: readSettings({ db, log }), nvenc, svtav1, codec, log, projectId }),
     // One queue for every render this computer makes, so a second video waits rather than
     // taking the processor and memory the first one and the page are using.

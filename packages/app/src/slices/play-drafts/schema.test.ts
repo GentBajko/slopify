@@ -103,7 +103,7 @@ it("accepts the video codec in the video edit settings, and nothing but the thre
     for (const codec of videoCodecs)
       expect(playDraftDocumentSchema.parse(withCodec(codec)).form.videoEdit?.codec).toBe(codec);
     expect(playDraftDocumentSchema.safeParse(withCodec("vp9")).success).toBe(false);
-    // Absent is H.264, as every video before it was.
+    // Absent is Automatic: AV1 on a card that can, else H.264 as before.
     expect(
       playDraftDocumentSchema.parse({
         ...h.document,

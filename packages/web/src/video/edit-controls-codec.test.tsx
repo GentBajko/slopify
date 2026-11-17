@@ -19,19 +19,27 @@ function Codec({
   return edit.codec;
 }
 
-it("offers the video codec as a select, H.264 for a project without one, with one plain line", async () => {
+it("offers the video codec as a select, Automatic for a project without one, with one plain line", async () => {
   const onChange = vi.fn();
   renderApp(<Codec value={undefined} onChange={onChange} />, testDeps({}));
   const select = screen.getByLabelText("Video codec") as HTMLSelectElement;
-  expect([...select.options].map((option) => option.text)).toEqual(["H.264", "HEVC", "AV1"]);
-  expect(select.value).toBe("h264");
+  expect([...select.options].map((option) => option.text)).toEqual([
+    "Automatic (AV1 on the graphics card, else H.264)",
+    "H.264",
+    "HEVC",
+    "AV1",
+  ]);
+  expect(select.value).toBe("auto");
   expect(screen.getByText(/H\.264 works everywhere/)).toBeTruthy();
   expect(screen.getByText(/SVT-AV1/)).toBeTruthy();
   await userEvent.selectOptions(select, "av1");
   expect(onChange).toHaveBeenCalledWith({ ...legacyVideoEdit, codec: "av1" });
+  onChange.mockClear();
+  await userEvent.selectOptions(select, "h264");
+  expect(onChange).toHaveBeenCalledWith({ ...legacyVideoEdit, codec: "h264" });
 });
 
-it("stores H.264 as no codec at all, so the project saves what it had", async () => {
+it("stores Automatic as no codec at all, so the project saves what it had", async () => {
   const onChange = vi.fn();
   renderApp(
     <Codec value={{ ...legacyVideoEdit, codec: "hevc" }} onChange={onChange} />,
@@ -39,6 +47,6 @@ it("stores H.264 as no codec at all, so the project saves what it had", async ()
   );
   const select = screen.getByLabelText("Video codec") as HTMLSelectElement;
   expect(select.value).toBe("hevc");
-  await userEvent.selectOptions(select, "h264");
+  await userEvent.selectOptions(select, "auto");
   expect(onChange).toHaveBeenCalledWith(legacyVideoEdit);
 });

@@ -684,6 +684,39 @@ describe("renderSlideshow in HEVC and AV1", () => {
     expect(made.notices[0]).toMatch(/H\.264 instead of AV1/);
   }, 30_000);
 
+  // Automatic: AV1 on the card, and should it fail, today's H.264 without a word.
+  it("renders today's H.264 silently when Automatic's card AV1 fails mid-render", async () => {
+    const scratch = mkdtempSync(join(tmpdir(), "slopify-slideshow-"));
+    try {
+      const output = join(scratch, "out.mp4");
+      const notices: string[] = [];
+      await renderSlideshow({
+        bin: resolveFfmpeg(process.env, ffmpegStatic),
+        ...plan({ imageSeconds: 1, images: [still(scratch)], body: undefined, output }),
+        burnSubtitles: false,
+        scratch,
+        machine: {
+          encode: {
+            kind: "nvenc",
+            bin: "/nonexistent/ffmpeg",
+            clipSpeed: "thorough",
+            codec: "av1",
+          },
+          fallback: { kind: "x264", clipSpeed: "thorough" },
+          priority: "background",
+        },
+        notice: (sentence) => notices.push(sentence),
+        signal: new AbortController().signal,
+        log,
+        onProgress: (): void => {},
+      });
+      expect(readFileSync(output).includes("x264 - core")).toBe(true);
+      expect(notices).toEqual([]);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it("renders HEVC on the processor when the card's HEVC fails mid-render", async () => {
     const made = await render(
       { kind: "nvenc", bin: "/nonexistent/ffmpeg", clipSpeed: "thorough", codec: "hevc" },
