@@ -69,11 +69,12 @@ Turning on **More images for long videos** in the Images row switches **Motion**
 
 | Choice | What it does |
 | --- | --- |
-| **H.264** | Works everywhere: every player, browser and upload site. The default, and what every video was before. |
+| **Automatic (AV1 on the graphics card, else H.264)** | The default, and what a project without the setting gets. AV1 encoded on the NVIDIA card whenever the card can encode AV1 (RTX 40 series and newer), whatever **Video encoder** says in Settings: about 44% of the H.264 file for the same picture. Without such a card the video is H.264 exactly as before, made by the Video encoder you chose, and nothing is said about it. If the card's AV1 fails mid-render, the video is made again the old way. |
+| **H.264** | Works everywhere: every player, browser and upload site. Always H.264, as every video was before, never AV1. |
 | **HEVC** | About half to three fifths of the file for the same picture. On the processor it is x265, from Slopify's own ffmpeg; on an NVIDIA card, the card's HEVC encoder. |
 | **AV1** | The smallest file: about 29% of the H.264 one on the processor, about 44% on an NVIDIA card, for the same picture (measured on a 1080p video). On the processor it needs an ffmpeg with SVT-AV1 on the computer (the `ffmpeg` on your `PATH` or `/usr/bin/ffmpeg`) and renders slower. |
 
-Whether the processor or the NVIDIA card encodes it is **Settings → Production defaults → Video encoder**. If AV1 is chosen and no ffmpeg with SVT-AV1 is found, or the card can't encode the chosen codec, the video is made as H.264 and its Video part says why; the video is never failed for it. Shorts and the style preview are always H.264. Changing the codec makes only the video again.
+For the explicit choices, whether the processor or the NVIDIA card encodes it is **Settings → Production defaults → Video encoder**. If AV1 is chosen and no ffmpeg with SVT-AV1 is found, or the card can't encode the chosen codec, the video is made as H.264 and its Video part says why; the video is never failed for it. Shorts and the style preview are always H.264. Choosing HEVC or AV1 makes only the video again; Automatic and H.264 leave a finished video current, and it comes out AV1 the next time it is made where the card allows.
 
 ## The Look
 

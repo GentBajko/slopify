@@ -33,7 +33,7 @@ New projects default to **Follow the narration**. It needs word timing, so it wo
 
 ## Video codec
 
-**Video codec** sits under Cuts: **H.264** (the default, works everywhere), **HEVC** or **AV1**. HEVC and AV1 make about half to a third of the file for the same picture; AV1 on the processor needs an ffmpeg with SVT-AV1 on the computer and renders slower. It combines with **Settings → Production defaults → Video encoder**, and falls back to H.264 with a note in the Video part when the computer can't encode it. Changing it outdates only the video. Shorts stay H.264. See [Video and style](Create-Video-and-Style#video-codec).
+**Video codec** sits under Cuts: **Automatic (AV1 on the graphics card, else H.264)**, the default, or **H.264** (works everywhere), **HEVC** or **AV1**. Automatic encodes AV1 on an NVIDIA card that can (whatever the Video encoder setting says), and otherwise H.264 exactly as before, without a note. HEVC and AV1 make about half to a third of the file for the same picture; AV1 on the processor needs an ffmpeg with SVT-AV1 on the computer and renders slower. The explicit choices combine with **Settings → Production defaults → Video encoder**, and fall back to H.264 with a note in the Video part when the computer can't encode them. Choosing HEVC or AV1 outdates only the video; Automatic and H.264 outdate nothing. Shorts stay H.264. See [Video and style](Create-Video-and-Style#video-codec).
 
 ## The Look
 
