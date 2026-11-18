@@ -27,22 +27,54 @@ function counted(rows: readonly Row[], match: RegExp): { done: number; total: nu
   return { done: own.filter((row) => row.state === "done").length, total: own.length };
 }
 
-export function videoActivity(db: DatabaseSync, projectId: string): StageActivity | undefined {
+// The current version's steps of one stage.
+function stageRows(db: DatabaseSync, projectId: string, kind: string): readonly Row[] | undefined {
   const head = currentRevisionId(db, projectId);
   if (head === undefined) return undefined;
-  const rows: Row[] = db
+  return db
     .prepare(
       `SELECT r.work_key AS key, w.state AS state, w.progress_current AS current, w.progress_total AS total
        FROM revision_work_reservations r JOIN revision_work w ON w.id = r.work_id
-       WHERE r.revision_id = ? AND w.project_id = ? AND w.kind = 'video'`,
+       WHERE r.revision_id = ? AND w.project_id = ? AND w.kind = ?`,
     )
-    .all(head, projectId)
+    .all(head, projectId, kind)
     .map((row) => ({
       key: String(row.key),
       state: String(row.state),
       current: typeof row.current === "number" ? row.current : null,
       total: typeof row.total === "number" ? row.total : null,
     }));
+}
+
+// What a running Images stage is doing. With the picture check on, each picture is a step and
+// its check another, so the stage's own count read "259 of 496" for 240 pictures. Counted
+// apart, each once: "240 of 240 pictures · 33 of 240 checked". Writing the scenes comes
+// before any picture, and keeps the stage's own count.
+export function imagesActivity(db: DatabaseSync, projectId: string): StageActivity | undefined {
+  const rows = stageRows(db, projectId, "images");
+  if (rows === undefined) return undefined;
+  const tally = (match: RegExp) => {
+    const own = rows.filter((row) => match.test(row.key));
+    return { done: own.filter((row) => row.state === "done").length, total: own.length };
+  };
+  const pictures = tally(/^image:/);
+  if (pictures.total === 0) return undefined;
+  const checks = tally(/^review:image:/);
+  const parts = [
+    { noun: "pictures", ...pictures },
+    ...(checks.total === 0 ? [] : [{ noun: "checked", ...checks }]),
+  ];
+  return {
+    label: checks.total === 0 ? "drawing the pictures" : "drawing and checking the pictures",
+    done: pictures.done + checks.done,
+    total: pictures.total + checks.total,
+    parts,
+  };
+}
+
+export function videoActivity(db: DatabaseSync, projectId: string): StageActivity | undefined {
+  const rows = stageRows(db, projectId, "video");
+  if (rows === undefined) return undefined;
   const running = (key: string) => rows.find((row) => row.key === key && row.state === "running");
   const percent = (label: string, row: Row | undefined): StageActivity => {
     const value = percentOf(row);

@@ -342,6 +342,15 @@ export interface StageActivity {
   readonly percent?: number;
   readonly done?: number;
   readonly total?: number;
+  // Counts that read apart, each once: "240 of 240 pictures · 33 of 240 checked". When given,
+  // they are what the row says; done and total still measure the time left over all of them.
+  readonly parts?: readonly ActivityPart[];
+}
+
+export interface ActivityPart {
+  readonly noun: string;
+  readonly done: number;
+  readonly total: number;
 }
 
 export interface Stage {

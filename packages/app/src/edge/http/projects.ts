@@ -25,7 +25,7 @@ import { channelById, projectChannels, setProjectChannel } from "../../slices/ch
 import { withProjectControl } from "../../slices/control/lock.js";
 import { stagesWithEta } from "../../slices/eta/view.js";
 import { sampleProjectIds } from "../../slices/onboarding/sample.js";
-import { videoActivity } from "../../slices/rebuild/activity.js";
+import { imagesActivity, videoActivity } from "../../slices/rebuild/activity.js";
 import { projectHolds } from "../../slices/reviews/holds.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -171,8 +171,13 @@ export function projectRoutes(deps: AppDeps) {
             project.config,
             deps.clock.now(),
           ).map((stage) => {
-            if (stage.kind !== "video" || stage.state !== "running") return stage;
-            const activity = videoActivity(deps.db, project.id);
+            if (stage.state !== "running") return stage;
+            const activity =
+              stage.kind === "video"
+                ? videoActivity(deps.db, project.id)
+                : stage.kind === "images"
+                  ? imagesActivity(deps.db, project.id)
+                  : undefined;
             return activity === undefined ? stage : { ...stage, activity };
           }),
           outputs: outputsOf(deps.db, project.id),

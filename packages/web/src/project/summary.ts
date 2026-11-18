@@ -116,6 +116,10 @@ export function summaryOf(
 export function activityText(stage: Stage): string | undefined {
   const activity = stage.activity;
   if (activity === undefined) return undefined;
+  if (activity.parts !== undefined && activity.parts.length > 0)
+    return activity.parts
+      .map((part) => `${String(part.done)} of ${String(part.total)} ${part.noun}`)
+      .join(" · ");
   if (activity.percent !== undefined) return `${activity.label} (${String(activity.percent)}%)`;
   if (activity.done !== undefined && activity.total !== undefined)
     return `${activity.label} (${String(activity.done)} of ${String(activity.total)})`;

@@ -193,7 +193,9 @@ export function RunningProject({
         />
         {drawing === undefined ? null : (
           <p className="m-0 text-small text-ink-2">
-            {`Images ${String(drawing.progressCurrent ?? images.length)} of ${String(drawing.progressTotal ?? "?")}`}
+            {drawing.activity?.parts === undefined
+              ? `Images ${String(drawing.progressCurrent ?? images.length)} of ${String(drawing.progressTotal ?? "?")}`
+              : capitalised(activityText(drawing) ?? "")}
           </p>
         )}
       </div>

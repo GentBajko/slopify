@@ -164,6 +164,24 @@ describe("the summary in a rundown row", () => {
     expect(stageFraction(rendering)).toBe(0.4);
   });
 
+  it("counts the pictures and their checks apart, not as one total of both", () => {
+    const checking = stage("images", "running", {
+      progressCurrent: 283,
+      progressTotal: 496,
+      activity: {
+        label: "drawing and checking the pictures",
+        done: 273,
+        total: 480,
+        parts: [
+          { noun: "pictures", done: 240, total: 240 },
+          { noun: "checked", done: 33, total: 240 },
+        ],
+      },
+    });
+    expect(summaryOf(checking, [], project)).toBe("240 of 240 pictures · 33 of 240 checked");
+    expect(stageFraction(checking)).toBeCloseTo(273 / 480);
+  });
+
   it("says only Running when the stage cannot report a count yet", () => {
     expect(summaryOf(stage("article", "running"), [], project)).toBe("Running");
     expect(
