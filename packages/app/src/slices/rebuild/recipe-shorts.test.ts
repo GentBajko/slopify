@@ -820,3 +820,138 @@ describe("shorts cut on the body's clock", () => {
     );
   });
 });
+
+describe("a short cut from its own chunks of the narration", () => {
+  // Three paragraphs, each voiced as its own chunk; short 1 is the first, short 2 the third.
+  const paragraphs = ["Alpha one. Alpha two.", "Beta one. Beta two.", "Gamma one. Gamma two."];
+  const chunked: RunConfig = {
+    ...shorts,
+    chunking: { mode: "paragraph" },
+    intro: { name: "Intro", mode: "text" },
+    rendered: { ...shorts.rendered, intro: "Welcome to the channel." },
+  } as RunConfig;
+  const article = (texts: readonly string[]) => texts.join("\n\n");
+  const contentOf = (texts: readonly string[]): RevisionContent => ({
+    ...content,
+    articleMarkdown: article(texts),
+  });
+  const configOf = (texts: readonly string[]): RunConfig => ({
+    ...chunked,
+    provided: { article: article(texts) },
+  });
+  const said = (number: number, at: number, text: string): ShortPick => ({
+    ...clip(number, at * 10, at * 10 + 40),
+    first: at * 2 + 1,
+    last: at * 2 + 2,
+    text,
+    seed: `seed-${String(number)}`,
+  });
+  // Each body chunk voiced: its request done with the words it said and a file.
+  function voiced(recipes: readonly ResolvedWorkRecipe[], files: Record<string, string>) {
+    return recipes.flatMap((row) =>
+      row.input.kind === "tts" && row.input.segment === "body"
+        ? [
+            {
+              ...piece(row.key, row.fingerprint, { text: row.input.text }),
+              assetId: files[row.input.text] ?? `file-${row.input.text}`,
+            },
+          ]
+        : [],
+    );
+  }
+  // The shorts planned for an article once its chunks are voiced, its pick has answered with
+  // `clips` and each clip's prompts are written.
+  function shortsFor(
+    texts: readonly string[],
+    clips: readonly ShortPick[],
+    value: RevisionContent = contentOf(texts),
+    files: Record<string, string> = {},
+  ) {
+    const c = configOf(texts);
+    const audio = voiced(recipesFor(c, [], value), files);
+    const pick = key(recipesFor(c, audio, value), "shorts:pick");
+    const picked = [...audio, piece("shorts:pick", pick.fingerprint, { shorts: clips })];
+    const second = recipesFor(c, picked, value);
+    const written = second
+      .filter((row) => row.key.endsWith(":prompts"))
+      .map((row) => piece(row.key, row.fingerprint, { prompts: ["One", "Two"] }));
+    return Object.fromEntries(
+      recipesFor(c, [...picked, ...written], value)
+        .filter((row) => row.key.startsWith("shorts:"))
+        .map((row) => [row.key, row.fingerprint]),
+    );
+  }
+  const own = (all: Record<string, string>, number: number) =>
+    Object.fromEntries(
+      Object.entries(all).filter(([name]) => name.startsWith(`shorts:${String(number)}:`)),
+    );
+  const before = shortsFor(paragraphs, [
+    said(1, 0, "Alpha one. Alpha two."),
+    said(2, 2, "Gamma one. Gamma two."),
+  ]);
+
+  it("keeps a short whose chunk is unchanged when another chunk is rewritten", () => {
+    const rewritten = [
+      paragraphs[0] ?? "",
+      "Beta, said anew. And longer now.",
+      paragraphs[2] ?? "",
+    ];
+    const after = shortsFor(rewritten, [
+      said(1, 0, "Alpha one. Alpha two."),
+      // Its sentences moved: the chunk before it says more now.
+      { ...said(2, 2, "Gamma one. Gamma two."), first: 5, last: 6, start: 25, end: 65 },
+    ]);
+    expect(Object.keys(own(after, 1))).toContain("shorts:1:render");
+    expect(own(after, 1)).toEqual(own(before, 1));
+    expect(own(after, 2)).toEqual(own(before, 2));
+  });
+
+  it("keeps a short when words are added before it", () => {
+    const added = ["Zero one. Zero two.", ...paragraphs];
+    const after = shortsFor(added, [
+      { ...said(1, 1, "Alpha one. Alpha two."), first: 3, last: 4 },
+      { ...said(2, 3, "Gamma one. Gamma two."), first: 7, last: 8 },
+    ]);
+    expect(own(after, 1)).toEqual(own(before, 1));
+    expect(own(after, 2)).toEqual(own(before, 2));
+  });
+
+  it("renders again only the short whose own chunk is voiced again", () => {
+    const after = shortsFor(
+      paragraphs,
+      [said(1, 0, "Alpha one. Alpha two."), said(2, 2, "Gamma one. Gamma two.")],
+      contentOf(paragraphs),
+      { "Gamma one. Gamma two.": "gamma-voiced-again" },
+    );
+    expect(own(after, 1)).toEqual(own(before, 1));
+    expect(after["shorts:2:render"]).not.toBe(before["shorts:2:render"]);
+    // Same words: its prompts and images stay.
+    expect(after["shorts:2:image:1"]).toBe(before["shorts:2:image:1"]);
+  });
+
+  it("makes again only the short whose own words changed", () => {
+    const edited = ["Alpha one. Alpha, now two.", paragraphs[1] ?? "", paragraphs[2] ?? ""];
+    const after = shortsFor(edited, [
+      { ...said(1, 0, "Alpha one. Alpha, now two."), seed: "token" },
+      said(2, 2, "Gamma one. Gamma two."),
+    ]);
+    expect(after["shorts:1:prompts"]).not.toBe(before["shorts:1:prompts"]);
+    expect(after["shorts:1:render"]).not.toBe(before["shorts:1:render"]);
+    expect(own(after, 2)).toEqual(own(before, 2));
+  });
+
+  it("picks again, once, when the body's words change, so kept shorts are found again", () => {
+    const edited = [paragraphs[0] ?? "", "Beta, said anew.", paragraphs[2] ?? ""];
+    const c = configOf(paragraphs);
+    const e = configOf(edited);
+    const pickOf = (cfg: RunConfig, texts: readonly string[]) =>
+      key(
+        recipesFor(cfg, voiced(recipesFor(cfg, [], contentOf(texts)), {}), contentOf(texts)),
+        "shorts:pick",
+      ).fingerprint;
+    expect(pickOf(e, edited)).not.toBe(pickOf(c, paragraphs));
+    // The intro is not the body.
+    const intro = { ...c, rendered: { ...c.rendered, intro: "Welcome back." } } as RunConfig;
+    expect(pickOf(intro, paragraphs)).toBe(pickOf(c, paragraphs));
+  });
+});

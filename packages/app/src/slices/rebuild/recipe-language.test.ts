@@ -50,7 +50,7 @@ describe("project language and the recipes", () => {
     // Updated once when shorts moved to the body's clock (2026-11-18): only the not-yet-made
     // `shorts:pick` and `shorts:future` changed; a pick already made keeps its fingerprint.
     expect(digest(english)).toBe(
-      "47acd2cea3ba6ffe318a7a3d2f83a5a27801b585562a03877579a9e032aff0aa",
+      "49110baab309d10fddb3df84415285255c622ded85939f11f441e66b8d040c4d",
     );
     expect(fingerprints({ ...english, language: "en" })).toEqual(fingerprints(english));
   });

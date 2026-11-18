@@ -388,4 +388,43 @@ it("picks the clips, writes their prompts, makes vertical images and renders eve
   expect(images.calls()).toBe(10);
   expect(files()["shorts:1:render"]).toBe(made["shorts:1:render"]);
   expect(files()["shorts:1:image:1"]).toBe(made["shorts:1:image:1"]);
+
+  // Two shorts again: short 1 is kept, one new moment is picked for short 2.
+  repick = [clip(5, 8)];
+  const two = edit();
+  await save(h.deps, h.projectId, {
+    ...two,
+    config: { ...two.config, shorts: { enabled: true, count: 2, minSeconds: 15, maxSeconds: 25 } },
+  });
+  await rebuild();
+  expect(model.calls()).toBe(9);
+  expect(images.calls()).toBe(13);
+  const paired = files();
+  expect(paired["shorts:1:image:1"]).toBe(made["shorts:1:image:1"]);
+
+  // A sentence inside short 2 is reworded: short 2 alone gets a new moment, in its own place;
+  // short 1, whose words are the same, keeps its image prompts and images.
+  repick = [clip(4, 7)];
+  const reworded = edit();
+  const text = article.replace("Sentence 6 has five words.", "Sentence 6 has new words.");
+  await save(h.deps, h.projectId, {
+    ...reworded,
+    config: { ...reworded.config, provided: { article: text } },
+    content: { ...reworded.content, articleMarkdown: text, articleEdited: true },
+  });
+  await rebuild();
+  // The pick, asked for one moment, and short 2's prompts; 20 s of sentences 4-7: two images.
+  expect(model.calls()).toBe(11);
+  expect(images.calls()).toBe(15);
+  const after = files();
+  expect(after["shorts:1:image:1"]).toBe(made["shorts:1:image:1"]);
+  expect(after["shorts:1:image:2"]).toBe(made["shorts:1:image:2"]);
+  expect(after["shorts:2:image:1"]).not.toBe(paired["shorts:2:image:1"]);
+  const cut = current(h.deps, h.projectId)
+    .outputs.filter((row) => row.selected && row.output.role === "short_video")
+    .map((row) => [row.output.meta.short, row.output.meta.sentences]);
+  expect(cut.toSorted()).toEqual([
+    [1, [1, 3]],
+    [2, [4, 7]],
+  ]);
 });

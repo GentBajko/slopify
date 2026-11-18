@@ -102,11 +102,15 @@ function buildEach(plain: RecipeContext): readonly ResolvedWorkRecipe[] {
       audio.cards ?? [],
       masterPlan(context, audio.levels, "video"),
       appearance,
-      masterPlan(
-        context,
-        audio.levels.filter((level) => level.key === levelKey("body")),
-        "video",
-      ),
+      {
+        master: masterPlan(
+          context,
+          audio.levels.filter((level) => level.key === levelKey("body")),
+          "video",
+        ),
+        chunks: audio.bodyChunks,
+        level: audio.levels.find((level) => level.key === levelKey("body")),
+      },
     ),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),

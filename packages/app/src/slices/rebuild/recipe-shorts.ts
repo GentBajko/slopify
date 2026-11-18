@@ -3,6 +3,8 @@ import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js"
 import { subjectOf } from "../admission/model.js";
 import { usesShorts } from "../admission/rules.js";
 import { withoutScene } from "../images/scenes.js";
+import { pausesOf } from "../narration/pauses-model.js";
+import { narrationRegenerationToken } from "../narration/plan.js";
 import { effectiveClips, type PickedShorts, pickedShortsOf } from "../shorts/clips.js";
 import {
   defaultShortsImagePrompt,
@@ -13,6 +15,8 @@ import {
 import type { ShortPick } from "../shorts/pick.js";
 import { imagePromptMessages } from "../shorts/prompts.js";
 import { type ImageAppearance, lookWait, withLooks } from "./recipe-appearance.js";
+import { voiceValues } from "./recipe-audio-parts.js";
+import { breathValues } from "./recipe-breaths.js";
 import { castFor } from "./recipe-cast.js";
 import { type MasterPlan, noMaster } from "./recipe-loudness.js";
 import {
@@ -60,8 +64,9 @@ export function shortsRecipes(
   master: MasterPlan = noMaster,
   // How the figures look, for a shorts image prompt with `{{Appearance}}` (`recipe-appearance.ts`).
   appearance?: ImageAppearance,
-  // Level the volume for the body alone: what a short on the body's clock plays.
-  bodyMaster: MasterPlan = master,
+  // The body alone, what a short on the body's clock is cut from: its levelled sound and, when
+  // it is voiced chunk by chunk, its chunks.
+  narration: BodyNarration = { master },
 ): readonly ResolvedWorkRecipe[] {
   const { config } = context;
   const shorts = config.shorts;
@@ -111,6 +116,8 @@ export function shortsRecipes(
                     [...short.hashtags],
                     short.why,
                     short.seed ?? null,
+                    // Only on lists that remember every word, so older lists keep theirs.
+                    ...(short.text === undefined ? [] : [short.text]),
                   ]),
                 ],
               ]),
@@ -139,15 +146,17 @@ export function shortsRecipes(
     legacy,
     recorded === undefined ? [] : [pickFor([recorded.fingerprint, asset]).fingerprint],
   );
-  const body = bodyTiming(timing);
+  const chunks = narration.chunks === undefined ? undefined : chunkSource(context, narration);
+  const body = bodyTiming(timing, chunks?.anchor);
   const onBody = legacyPicked === undefined && body !== undefined;
   const pick = onBody ? pickFor(body) : legacy;
   const picked = onBody ? savedPicked(context, pick) : legacyPicked;
   // What a render on each clock reads the narration by: the body's timing and its levelled
   // sound, or the whole timing and every levelled part.
-  const heard = onBody
-    ? { timing: body, master: bodyMaster }
-    : { timing: resourceIdentity(context, timing), master };
+  const heard = (clip: ShortPick) =>
+    onBody
+      ? (chunks?.span(clip, body) ?? { timing: body, master: narration.master })
+      : { timing: resourceIdentity(context, timing), master };
   const images = config.images ?? { provider: "", model: "" };
   const style = styled === undefined ? defaultShortsImagePrompt : withoutScene(styled.text);
   if (picked === undefined)
@@ -253,6 +262,7 @@ export function shortsRecipes(
     );
     recipes.push(...stills);
     const extras = renderExtras(context, clip);
+    const sound = heard(clip);
     recipes.push(
       recipe(
         context,
@@ -263,10 +273,11 @@ export function shortsRecipes(
           version: 1,
           operation: "short-render-v1",
           values: [
-            heard.timing,
+            sound.timing,
             clip.number,
-            clip.start,
-            clip.end,
+            // On its chunks, a clip is placed by its words when it renders: where the body's
+            // other chunks moved it is no reason to cut it again.
+            ...("chunks" in sound ? [clip.text] : [clip.start, clip.end]),
             stills.map((still) => resourceIdentity(context, still)),
             config.imageSeconds,
             config.zoomPercent,
@@ -280,14 +291,14 @@ export function shortsRecipes(
               ? []
               : [["figure-cards-v1", cards.map((card) => resourceIdentity(context, card))]]),
             // Only while the volume is levelled, so every short without it keeps its fingerprint.
-            ...heard.master.values,
+            ...sound.master.values,
           ],
         },
         [
           pick.key,
           ...stills.map((still) => still.key),
           ...cards.map((card) => card.key),
-          ...heard.master.keys,
+          ...sound.master.keys,
         ],
         { token },
       ),
@@ -303,6 +314,8 @@ export function shortsRecipes(
 // has no body to find.
 export function bodyTiming(
   timing: Pick<ResolvedWorkRecipe, "input" | "dependsOn">,
+  // The body's chunks as they were voiced, in place of the body's file (`chunkSource`).
+  chunks?: FingerprintValue,
 ): FingerprintValue | undefined {
   if (timing.input.kind !== "local" || !Array.isArray(timing.input.values)) return undefined;
   const values: readonly FingerprintValue[] = timing.input.values;
@@ -317,10 +330,145 @@ export function bodyTiming(
   return [
     bodyClockValue,
     timing.input.operation,
-    file === undefined ? entry : ["file", file, entry.transcript ?? null],
+    chunks ?? (file === undefined ? entry : ["file", file, entry.transcript ?? null]),
     language ?? null,
     ...words,
   ];
+}
+
+// The body as `shortsRecipes` reads it apart from the timing.
+export interface BodyNarration {
+  // Level the volume for the body alone.
+  readonly master: MasterPlan;
+  // The body's narration chunks in reading order, with the words each was voiced from.
+  readonly chunks?: readonly { readonly key: string; readonly text: string }[] | undefined;
+  // The levelled body, whose settings a short's sound is levelled by.
+  readonly level?: ResolvedWorkRecipe | undefined;
+}
+
+// A body voiced chunk by chunk. The pick reads the chunks' words and how they were asked for
+// (`anchor`): a chunk's own regeneration, the voice, the pauses. Not their files, which land
+// mid-run; a change that brings a new file is in the request. Each short is cut from the chunks
+// its sentences fall in (`span`), so a chunk voiced again elsewhere, or words added before it,
+// leave it as it is. A clip whose words can't be found once among the chunks reads all of them.
+function chunkSource(context: RecipeContext, narration: BodyNarration) {
+  const list = narration.chunks ?? [];
+  const tokens = context.content.regenerationTokens;
+  const token = (key: string) => narrationRegenerationToken(tokens, key, "body");
+  const asked = [voiceValues(context), pausesValue(context)];
+  const anchor: FingerprintValue = [
+    "chunks-v1",
+    list.map((chunk) => [chunk.text, token(chunk.key)]),
+    ...asked,
+  ];
+  // What the body was voiced from, in order: each chunk's requests as they were made (a chunk
+  // longer than the voice takes in one request is several), with the words each said and its
+  // file; a chunk not voiced yet is itself one. Read from the version's records, not the plan,
+  // so a plan that splits a chunk otherwise reads the same files.
+  const units = list.flatMap((chunk) => {
+    const parts = context.manifest.pieces
+      .flatMap((row) => {
+        const number = row.key.startsWith(`${chunk.key}:`)
+          ? Number(row.key.slice(chunk.key.length + 1))
+          : Number.NaN;
+        if (
+          !Number.isInteger(number) ||
+          row.piece.state !== "done" ||
+          !selectedReference(row) ||
+          row.assetId === null
+        )
+          return [];
+        const text = partText(row.piece.payload);
+        return text === undefined ? [] : [{ number, text, file: row.assetId }];
+      })
+      .toSorted((left, right) => left.number - right.number);
+    const whole = parts.length > 0 && parts.every((part, at) => part.number === at + 1);
+    return whole
+      ? parts.map((part) => ({
+          text: part.text,
+          identity: [part.text, token(chunk.key), part.file] as FingerprintValue,
+        }))
+      : [{ text: chunk.text, identity: [chunk.text, token(chunk.key), null] as FingerprintValue }];
+  });
+  // Their words run together, letters and digits only, with where each one ends.
+  let stream = "";
+  const ends: number[] = [];
+  for (const unit of units) {
+    stream += spokenLetters(unit.text);
+    ends.push(stream.length);
+  }
+  const level =
+    narration.level?.input.kind === "local" && Array.isArray(narration.level.input.values)
+      ? narration.level.input.values.slice(2)
+      : [];
+  // The levelled body's master, with the body's own levelled file left out: how it is levelled.
+  const master: MasterPlan = {
+    keys: narration.master.keys,
+    values: narration.master.values.map((value) =>
+      Array.isArray(value) && value[0] === "loudness-v1"
+        ? ["span-loudness-v1", level, ...value.slice(2)]
+        : value,
+    ),
+  };
+  return {
+    anchor,
+    span: (clip: Pick<ShortPick, "text">, body: FingerprintValue) => {
+      const words = spokenLetters(clip.text);
+      const at = words === "" ? -1 : stream.indexOf(words);
+      if (at < 0 || stream.indexOf(words, at + 1) >= 0) return undefined;
+      const first = ends.findIndex((end) => end > at);
+      const last = ends.findIndex((end) => end >= at + words.length);
+      if (first < 0 || last < 0) return undefined;
+      const values: readonly FingerprintValue[] = Array.isArray(body) ? body : [];
+      return {
+        chunks: true as const,
+        timing: [
+          bodyClockValue,
+          "span-v1",
+          // How the words are timed: the timing operation, language and voices marker.
+          values[1] ?? null,
+          values[3] ?? null,
+          ...values.slice(4),
+          units.slice(first, last + 1).map((unit) => unit.identity),
+          ...asked,
+          breathValues(context.config),
+        ],
+        master,
+      };
+    },
+  };
+}
+
+// The words a narration request was voiced from, as its piece saved them.
+function partText(payload: string | null): string | undefined {
+  if (payload === null) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(payload);
+    return typeof parsed === "object" &&
+      parsed !== null &&
+      "text" in parsed &&
+      typeof parsed.text === "string"
+      ? parsed.text
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function pausesValue(context: RecipeContext): FingerprintValue {
+  const pauses = pausesOf(context.config);
+  return pauses === undefined ? null : [pauses.sentenceSeconds, pauses.paragraphSeconds];
+}
+
+// What a text says, as letters and digits only and without its delivery notes in brackets:
+// how a clip's words are found in its chunks whatever the word timing made of the
+// punctuation, case and spacing.
+export function spokenLetters(text: string): string {
+  return text
+    .replace(/\[[^\]]*\]/g, " ")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
 function isRecord(

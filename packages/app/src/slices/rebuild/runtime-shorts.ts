@@ -13,7 +13,7 @@ import type { PreparedOutput } from "../revisions/publication-model.js";
 import { readyOutput } from "../revisions/view.js";
 import { clipWords } from "../shorts/captions.js";
 import { effectiveClips, pickedShortsOf } from "../shorts/clips.js";
-import { anchorKept, lostMessage, withNewPicks } from "../shorts/keep.js";
+import { anchorKept, locateClip, withNewPicks } from "../shorts/keep.js";
 import {
   defaultShortsPrompt,
   musicVolumeOf,
@@ -113,8 +113,7 @@ async function pick(
     keep === undefined
       ? undefined
       : anchorKept(keep.slice(0, shorts.count), sentences, durationSeconds);
-  if (anchored !== undefined && anchored.lost.length > 0)
-    throw new Error(lostMessage(anchored.lost, keep ?? []));
+  // A kept short whose own words changed is picked anew in its place; the others stay.
   const keptPicks = anchored?.picks ?? [];
   const wanted = shorts.count - keptPicks.length;
   const taken = keptPicks.map(({ first, last }) => ({ first, last }));
@@ -337,14 +336,22 @@ async function render(
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
   const allWords = readTimingWords(deps, context, view, shortsTimingPurpose).words;
-  // A clip on the body's clock is found where the body starts now, after whatever intro.
+  // A clip on the body's clock is found by its sentences in the body as it is now, which
+  // starts after whatever intro: other chunks voiced again or words added before it may have
+  // moved it since it was picked.
   const input = piece.input;
-  const offset =
-    input.kind === "local" && onBodyClock(input.values)
-      ? bodyWindow(await revisionAudio(deps, context, view)).start
-      : 0;
-  const start = clip.start + offset;
-  const end = clip.end + offset;
+  let start = clip.start;
+  let end = clip.end;
+  if (input.kind === "local" && onBodyClock(input.values)) {
+    const body = bodyWindow(await revisionAudio(deps, context, view));
+    const found = locateClip(transcriptSentences(bodyWords(allWords, body)), clip, body.seconds);
+    if (found === undefined)
+      throw new Error(
+        `The words short ${String(clip.number)} was cut from are no longer in the narration. Use Pick different moments in ${editSettings.shorts}, then Try again.`,
+      );
+    start = found.start + body.start;
+    end = found.end + body.start;
+  }
   const words = clipWords(allWords, start, end);
   // The upright cards whose descriptions fall in the clip, on the clip's own timeline.
   const figures = usesFigureCards(config)
