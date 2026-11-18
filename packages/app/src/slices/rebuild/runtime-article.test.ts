@@ -249,6 +249,30 @@ describe("the written article", () => {
     }
   });
 
+  it("keeps no note the model wrote about its own work before the article", async () => {
+    const h = await fixture();
+    try {
+      const article = "## Rope\n\nRope is twisted fibre.\n";
+      const providers = answering(() => ({
+        text: `I've read all sixteen documents in full and am now writing the narration and its end matter.\n\n${article}`,
+        finishReason: "stop",
+      }));
+      expect(await executeProviderRecipe(h.deps, h.context, providers, h.piece)).toBe("done");
+      const selected = (
+        getRevisionView(h.deps, h.projectId, h.baseline.revision.id)?.outputs ?? []
+      ).filter((row) => row.selected);
+      const read = (role: string) => {
+        const row = selected.find((one) => one.output.role === role);
+        if (row === undefined) throw new Error(`Missing ${role}`);
+        return readFileSync(outputPath(h.deps.paths, h.projectId, row.output.path), "utf8");
+      };
+      expect(read("article_md")).toBe(article);
+      expect(read("article_txt")).toBe("Rope\n\nRope is twisted fibre.\n");
+    } finally {
+      h.close();
+    }
+  });
+
   it("writes no sources or glossary file when the article has neither section", async () => {
     const h = await fixture();
     try {
