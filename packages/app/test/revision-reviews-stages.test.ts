@@ -37,7 +37,7 @@ vi.mock("../src/adapters/alignment/index.js", () => {
       request.text
         .split(/\s+/)
         .filter((word) => word !== "")
-        .map((text, index) => ({ text, start: index, end: index + 0.9 })),
+        .map((text, index) => ({ text, start: index + 0.5, end: index + 1.4 })),
   };
   return { ...mocked, alignSubtitlesWith: () => mocked.alignSubtitles };
 });
@@ -174,7 +174,8 @@ it("shows the thumbnail reviewer the thumbnail file and the video title", async 
   }
 });
 
-// Two shorts from forty words at one a second (as `revision-shorts.test.ts` sets them up):
+// Two shorts from forty words at one a second, half a second into a 41-second narration (as
+// `revision-shorts.test.ts` sets them up):
 // sentences 1-3 in two vertical images, sentences 5-8 in three.
 const clip = (first: number, last: number) => ({
   first,
@@ -201,7 +202,7 @@ it("shows each short's reviewer its title and its images, and flags a failed sho
         : undefined,
     work: shortsWork,
     image: fakeImage({ bytes: still("270x480") }),
-    speech: quiet(40),
+    speech: quiet(41),
     config: (base) => ({
       ...base,
       title: "Sentences",

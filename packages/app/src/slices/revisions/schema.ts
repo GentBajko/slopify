@@ -42,6 +42,7 @@ const keptShortSchema = z
     hashtags: z.array(z.string().max(100)).max(30),
     why: z.string().max(2000),
     seed: z.string().max(128).nullable().optional(),
+    text: z.string().max(100000).optional(),
   })
   .strict();
 export const revisionContentSchema = z

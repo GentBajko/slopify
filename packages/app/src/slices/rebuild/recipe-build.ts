@@ -6,7 +6,7 @@ import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
 import { fillPrompt } from "./recipe-keywords.js";
 import { linePlan } from "./recipe-lines.js";
-import { masterPlan } from "./recipe-loudness.js";
+import { levelKey, masterPlan } from "./recipe-loudness.js";
 import { type RecipeContext, type ResolvedWorkRecipe, resourceIdentity } from "./recipe-model.js";
 import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
@@ -102,6 +102,15 @@ function buildEach(plain: RecipeContext): readonly ResolvedWorkRecipe[] {
       audio.cards ?? [],
       masterPlan(context, audio.levels, "video"),
       appearance,
+      {
+        master: masterPlan(
+          context,
+          audio.levels.filter((level) => level.key === levelKey("body")),
+          "video",
+        ),
+        chunks: audio.bodyChunks,
+        level: audio.levels.find((level) => level.key === levelKey("body")),
+      },
     ),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),

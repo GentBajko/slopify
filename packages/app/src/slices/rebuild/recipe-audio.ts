@@ -39,6 +39,10 @@ export interface AudioRecipes {
   readonly levels: readonly ResolvedWorkRecipe[];
   // "Show tables and figures on screen": the cards of the described blocks, in reading order.
   readonly cards?: readonly ResolvedWorkRecipe[] | undefined;
+  // The body's narration chunks in reading order, each with the words it was voiced from: a
+  // short is cut from the ones its sentences fall in (`recipe-shorts.ts`). Only for a body
+  // voiced chunk by chunk by one voice.
+  readonly bodyChunks?: readonly { readonly key: string; readonly text: string }[] | undefined;
 }
 export function bodyNarrationGroups(
   context: RecipeContext,
@@ -92,6 +96,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         ]);
   let sections: readonly ScriptSection[] | undefined;
   let cards: readonly ResolvedWorkRecipe[] = [];
+  let bodyChunks: readonly { readonly key: string; readonly text: string }[] | undefined;
   if (config.sources.audio === "provide") {
     body = recipe(
       context,
@@ -145,6 +150,10 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       if (group.length === 0) pending = true;
       parts.push(...group);
     }
+    bodyChunks = groups.map((group, at) => ({
+      key: group.key,
+      text: transcripts[at]?.effective ?? group.text,
+    }));
     // A chunk with its own narration edit keeps the transcript in this form even once the article
     // says the same (`bodyNarrationGroups`), so the word timing made from it stays current.
     if (
@@ -356,6 +365,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     levels,
     ...(sections === undefined ? {} : { sections }),
     ...(cards.length === 0 ? {} : { cards }),
+    ...(bodyChunks === undefined ? {} : { bodyChunks }),
   };
 }
 function effectiveText(context: RecipeContext, key: string, original: string): string {

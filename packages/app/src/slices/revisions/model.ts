@@ -53,6 +53,9 @@ export interface KeptShort {
   readonly why: string;
   // The token its prompts, images and render carry (`clipToken`).
   readonly seed?: string | null | undefined;
+  // Every sentence it says, joined: a word changed anywhere in it, not only at its ends, makes
+  // it a new moment. Absent on keep lists saved before it.
+  readonly text?: string | undefined;
 }
 
 export interface RevisionContent {

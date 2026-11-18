@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RunConfig } from "../admission/model.js";
-import type { ManifestPiece, RevisionContent } from "../revisions/model.js";
+import type { ManifestOutput, ManifestPiece, RevisionContent } from "../revisions/model.js";
 import { pickedShortsOf } from "../shorts/clips.js";
 import type { ShortPick } from "../shorts/pick.js";
 import { buildRecipes } from "./recipe-build.js";
-import { config, content, emptyView, readyView, workFor } from "./recipe-fixture.js";
+import { catalogue, config, content, emptyView, readyView, workFor } from "./recipe-fixture.js";
 import { type ResolvedWorkRecipe, recipe, resourceIdentity } from "./recipe-model.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
 import { savedPicked } from "./recipe-shorts.js";
@@ -71,10 +71,32 @@ function key(recipes: readonly ResolvedWorkRecipe[], name: string): ResolvedWork
   return found;
 }
 
-// The recipes once the pick has answered, and once each clip's prompts have too.
-function unfolded(c: RunConfig = shorts, value: RevisionContent = content) {
+// The pick as it was asked before shorts were cut on the body's clock: of the whole timing.
+function legacyPick(recipes: readonly ResolvedWorkRecipe[], value: RevisionContent = content) {
+  const pick = key(recipes, "shorts:pick");
+  const timing = key(recipes, "subtitles:timing");
+  if (pick.input.kind !== "local" || !Array.isArray(pick.input.values))
+    throw new Error("Expected a local pick");
+  const [, ...rest] = pick.input.values;
+  const context = {
+    content: value,
+    manifest: { outputs: [], pieces: [] },
+  } as unknown as Parameters<typeof resourceIdentity>[0];
+  return recipe(
+    context,
+    pick.key,
+    pick.stage,
+    { ...pick.input, values: [resourceIdentity(context, timing), ...rest] },
+    pick.dependsOn,
+    { kind: "provider" },
+  );
+}
+
+// The recipes once the pick has answered, and once each clip's prompts have too. `legacy`
+// saves the pick as one made before shorts were cut on the body's clock.
+function unfolded(c: RunConfig = shorts, value: RevisionContent = content, legacy = false) {
   const first = recipesFor(c, [], value);
-  const pick = key(first, "shorts:pick");
+  const pick = legacy ? legacyPick(first, value) : key(first, "shorts:pick");
   const picked = [
     piece("shorts:pick", pick.fingerprint, { shorts: [clip(1, 10, 45), clip(2, 60, 100)] }),
   ];
@@ -355,7 +377,7 @@ describe("Shorts recipes, clip by clip", () => {
   });
 
   it("plans a short saved before these settings exactly as it did", () => {
-    const recipes = unfolded().third;
+    const recipes = unfolded(shorts, content, true).third;
     const timing = key(recipes, "subtitles:timing");
     const context = {
       config: shorts,
@@ -654,5 +676,282 @@ describe("the saved pick of an older project while its run is planned", () => {
     } as unknown as Parameters<typeof savedPicked>[0];
     expect(savedPicked(context, pick)).toBeUndefined();
     expect(savedPicked(context, pick, ["logical-fp"])).not.toBeUndefined();
+  });
+});
+
+describe("shorts cut on the body's clock", () => {
+  // A narrated video with a spoken intro and outro, as a channel template sets them.
+  const framed = (intro: string, outro: string, more: Partial<RunConfig> = {}): RunConfig =>
+    ({
+      ...shorts,
+      intro: { name: "Intro", mode: "text" },
+      outro: { name: "Outro", mode: "text" },
+      rendered: { ...shorts.rendered, intro, outro },
+      ...more,
+    }) as RunConfig;
+  const before = framed("Welcome to the channel.", "Thanks for listening.");
+  const newIntro = framed("Welcome back. Find the book on the website.", "Thanks for listening.");
+  const newOutro = framed("Welcome to the channel.", "Support the channel on the website.");
+  const loudness = { loudness: { videoLufs: -14, audioFilesLufs: -18 } } as Partial<RunConfig>;
+
+  // Every shorts step planned for `after` from the work saved under `saved`'s plan.
+  function shortsAfter(saved: RunConfig, after: RunConfig, legacy = false) {
+    const { first, third } = unfolded(saved, content, legacy);
+    const pieces = [
+      piece("shorts:pick", (legacy ? legacyPick(first) : key(first, "shorts:pick")).fingerprint, {
+        shorts: [clip(1, 10, 45), clip(2, 60, 100)],
+      }),
+      ...["shorts:1:prompts", "shorts:2:prompts"].map((name, at) =>
+        piece(name, key(third, name).fingerprint, {
+          prompts: at === 0 ? ["A harbor at dawn", "Boats leaving"] : ["A hill", "A tower"],
+        }),
+      ),
+    ];
+    const shortsOf = (recipes: readonly ResolvedWorkRecipe[]) =>
+      Object.fromEntries(
+        recipes
+          .filter((row) => row.key.startsWith("shorts:"))
+          .map((row) => [row.key, row.fingerprint]),
+      );
+    const was = recipesFor(saved, pieces);
+    const now = recipesFor(after, pieces);
+    return {
+      was: shortsOf(was),
+      now: shortsOf(now),
+      timing: [key(was, "subtitles:timing").fingerprint, key(now, "subtitles:timing").fingerprint],
+    };
+  }
+
+  for (const [name, after] of [
+    ["intro", newIntro],
+    ["outro", newOutro],
+  ] as const)
+    it(`keeps the pick and every short as they are when only the ${name} changes`, () => {
+      const { was, now, timing } = shortsAfter(before, after);
+      // The new words move every word of the video's timing...
+      expect(timing[1]).not.toBe(timing[0]);
+      // ...and not one shorts step: the pick, each clip's prompts, images and render.
+      expect(Object.keys(now)).toEqual([
+        "shorts:pick",
+        "shorts:1:prompts",
+        "shorts:1:image:1",
+        "shorts:1:image:2",
+        "shorts:1:render",
+        "shorts:2:prompts",
+        "shorts:2:image:1",
+        "shorts:2:image:2",
+        "shorts:2:render",
+      ]);
+      expect(now).toEqual(was);
+    });
+
+  it("keeps every short with the volume levelled, whose master reads the body alone", () => {
+    const { was, now } = shortsAfter(
+      framed("Welcome to the channel.", "Thanks for listening.", loudness),
+      framed("Welcome back. Find the book on the website.", "Thanks for listening.", loudness),
+    );
+    expect(now["shorts:1:render"]).toBeDefined();
+    expect(now).toEqual(was);
+  });
+
+  it("picks again when the body's narration changes", () => {
+    const edited = { ...content, articleMarkdown: "First paragraph.\n\nA new second paragraph." };
+    const a = key(recipesFor(before), "shorts:pick");
+    const b = key(
+      recipesFor({ ...before, provided: { article: edited.articleMarkdown } }, [], edited),
+      "shorts:pick",
+    );
+    expect(b.fingerprint).not.toBe(a.fingerprint);
+  });
+
+  it("reads the body's timing, with no intro, outro or silence in it", () => {
+    const pick = key(recipesFor(before), "shorts:pick");
+    if (pick.input.kind !== "local" || !Array.isArray(pick.input.values))
+      throw new Error("Expected a local pick");
+    const timing = pick.input.values[0];
+    expect(Array.isArray(timing) && timing[0]).toBe("body-clock-v1");
+    expect(JSON.stringify(timing)).not.toContain("Welcome");
+    // The silence around the intro and outro moves the body, not its words.
+    expect(
+      key(recipesFor({ ...before, silenceGapSeconds: 2, edgeSilenceSeconds: 1 }), "shorts:pick")
+        .fingerprint,
+    ).toBe(pick.fingerprint);
+  });
+
+  it("is the same pick in a run's plan, which reads the catalogue, once the body is made", () => {
+    // The catalogue's character limit can split the narration's requests another way, so the
+    // body's recipe has another fingerprint there; its file is the same.
+    const plan = (withCatalogue: boolean) =>
+      buildRecipes({
+        config: before,
+        content,
+        manifest: {
+          outputs: [
+            {
+              slot: "audio:body:concat",
+              workKey: "audio:body:concat",
+              assetId: "body-file",
+              fingerprint: "made-before",
+              state: "ready",
+              output: { durationMs: 100_000 },
+            } as unknown as ManifestOutput,
+          ],
+          pieces: [],
+        },
+        resolved: { articleMarkdown: content.articleMarkdown ?? null, researchNotes: null },
+        ...(withCatalogue ? { catalogue } : {}),
+      });
+    expect(key(plan(true), "shorts:pick").fingerprint).toBe(
+      key(plan(false), "shorts:pick").fingerprint,
+    );
+  });
+
+  it("keeps a pick made on the video's clock while its timing holds, then moves to the body's", () => {
+    // Saved before this change: nothing about it is outdated while the timing is the same.
+    const same = shortsAfter(before, before, true);
+    expect(same.now).toEqual(same.was);
+    // A new intro moves the timing it was asked of: the pick is made again once, on the
+    // body's clock, and is left alone by every intro after that.
+    const moved = shortsAfter(before, newIntro, true);
+    expect(moved.now["shorts:pick"]).not.toBe(moved.was["shorts:pick"]);
+    expect(moved.now["shorts:pick"]).toBe(key(recipesFor(newIntro), "shorts:pick").fingerprint);
+    expect(key(recipesFor(newIntro), "shorts:pick").fingerprint).toBe(
+      key(recipesFor(before), "shorts:pick").fingerprint,
+    );
+  });
+});
+
+describe("a short cut from its own chunks of the narration", () => {
+  // Three paragraphs, each voiced as its own chunk; short 1 is the first, short 2 the third.
+  const paragraphs = ["Alpha one. Alpha two.", "Beta one. Beta two.", "Gamma one. Gamma two."];
+  const chunked: RunConfig = {
+    ...shorts,
+    chunking: { mode: "paragraph" },
+    intro: { name: "Intro", mode: "text" },
+    rendered: { ...shorts.rendered, intro: "Welcome to the channel." },
+  } as RunConfig;
+  const article = (texts: readonly string[]) => texts.join("\n\n");
+  const contentOf = (texts: readonly string[]): RevisionContent => ({
+    ...content,
+    articleMarkdown: article(texts),
+  });
+  const configOf = (texts: readonly string[]): RunConfig => ({
+    ...chunked,
+    provided: { article: article(texts) },
+  });
+  const said = (number: number, at: number, text: string): ShortPick => ({
+    ...clip(number, at * 10, at * 10 + 40),
+    first: at * 2 + 1,
+    last: at * 2 + 2,
+    text,
+    seed: `seed-${String(number)}`,
+  });
+  // Each body chunk voiced: its request done with the words it said and a file.
+  function voiced(recipes: readonly ResolvedWorkRecipe[], files: Record<string, string>) {
+    return recipes.flatMap((row) =>
+      row.input.kind === "tts" && row.input.segment === "body"
+        ? [
+            {
+              ...piece(row.key, row.fingerprint, { text: row.input.text }),
+              assetId: files[row.input.text] ?? `file-${row.input.text}`,
+            },
+          ]
+        : [],
+    );
+  }
+  // The shorts planned for an article once its chunks are voiced, its pick has answered with
+  // `clips` and each clip's prompts are written.
+  function shortsFor(
+    texts: readonly string[],
+    clips: readonly ShortPick[],
+    value: RevisionContent = contentOf(texts),
+    files: Record<string, string> = {},
+  ) {
+    const c = configOf(texts);
+    const audio = voiced(recipesFor(c, [], value), files);
+    const pick = key(recipesFor(c, audio, value), "shorts:pick");
+    const picked = [...audio, piece("shorts:pick", pick.fingerprint, { shorts: clips })];
+    const second = recipesFor(c, picked, value);
+    const written = second
+      .filter((row) => row.key.endsWith(":prompts"))
+      .map((row) => piece(row.key, row.fingerprint, { prompts: ["One", "Two"] }));
+    return Object.fromEntries(
+      recipesFor(c, [...picked, ...written], value)
+        .filter((row) => row.key.startsWith("shorts:"))
+        .map((row) => [row.key, row.fingerprint]),
+    );
+  }
+  const own = (all: Record<string, string>, number: number) =>
+    Object.fromEntries(
+      Object.entries(all).filter(([name]) => name.startsWith(`shorts:${String(number)}:`)),
+    );
+  const before = shortsFor(paragraphs, [
+    said(1, 0, "Alpha one. Alpha two."),
+    said(2, 2, "Gamma one. Gamma two."),
+  ]);
+
+  it("keeps a short whose chunk is unchanged when another chunk is rewritten", () => {
+    const rewritten = [
+      paragraphs[0] ?? "",
+      "Beta, said anew. And longer now.",
+      paragraphs[2] ?? "",
+    ];
+    const after = shortsFor(rewritten, [
+      said(1, 0, "Alpha one. Alpha two."),
+      // Its sentences moved: the chunk before it says more now.
+      { ...said(2, 2, "Gamma one. Gamma two."), first: 5, last: 6, start: 25, end: 65 },
+    ]);
+    expect(Object.keys(own(after, 1))).toContain("shorts:1:render");
+    expect(own(after, 1)).toEqual(own(before, 1));
+    expect(own(after, 2)).toEqual(own(before, 2));
+  });
+
+  it("keeps a short when words are added before it", () => {
+    const added = ["Zero one. Zero two.", ...paragraphs];
+    const after = shortsFor(added, [
+      { ...said(1, 1, "Alpha one. Alpha two."), first: 3, last: 4 },
+      { ...said(2, 3, "Gamma one. Gamma two."), first: 7, last: 8 },
+    ]);
+    expect(own(after, 1)).toEqual(own(before, 1));
+    expect(own(after, 2)).toEqual(own(before, 2));
+  });
+
+  it("renders again only the short whose own chunk is voiced again", () => {
+    const after = shortsFor(
+      paragraphs,
+      [said(1, 0, "Alpha one. Alpha two."), said(2, 2, "Gamma one. Gamma two.")],
+      contentOf(paragraphs),
+      { "Gamma one. Gamma two.": "gamma-voiced-again" },
+    );
+    expect(own(after, 1)).toEqual(own(before, 1));
+    expect(after["shorts:2:render"]).not.toBe(before["shorts:2:render"]);
+    // Same words: its prompts and images stay.
+    expect(after["shorts:2:image:1"]).toBe(before["shorts:2:image:1"]);
+  });
+
+  it("makes again only the short whose own words changed", () => {
+    const edited = ["Alpha one. Alpha, now two.", paragraphs[1] ?? "", paragraphs[2] ?? ""];
+    const after = shortsFor(edited, [
+      { ...said(1, 0, "Alpha one. Alpha, now two."), seed: "token" },
+      said(2, 2, "Gamma one. Gamma two."),
+    ]);
+    expect(after["shorts:1:prompts"]).not.toBe(before["shorts:1:prompts"]);
+    expect(after["shorts:1:render"]).not.toBe(before["shorts:1:render"]);
+    expect(own(after, 2)).toEqual(own(before, 2));
+  });
+
+  it("picks again, once, when the body's words change, so kept shorts are found again", () => {
+    const edited = [paragraphs[0] ?? "", "Beta, said anew.", paragraphs[2] ?? ""];
+    const c = configOf(paragraphs);
+    const e = configOf(edited);
+    const pickOf = (cfg: RunConfig, texts: readonly string[]) =>
+      key(
+        recipesFor(cfg, voiced(recipesFor(cfg, [], contentOf(texts)), {}), contentOf(texts)),
+        "shorts:pick",
+      ).fingerprint;
+    expect(pickOf(e, edited)).not.toBe(pickOf(c, paragraphs));
+    // The intro is not the body.
+    const intro = { ...c, rendered: { ...c.rendered, intro: "Welcome back." } } as RunConfig;
+    expect(pickOf(intro, paragraphs)).toBe(pickOf(c, paragraphs));
   });
 });

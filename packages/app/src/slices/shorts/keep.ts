@@ -1,4 +1,3 @@
-import { editSettings } from "../../kernel/ports/settings-places.js";
 import type { KeptShort } from "../revisions/model.js";
 import type { PickedSentence } from "./clips.js";
 import { clipBounds, type ShortPick } from "./pick.js";
@@ -30,6 +29,10 @@ export function keptOf(
     hashtags: clip.hashtags,
     why: clip.why,
     ...(clip.seed === undefined ? {} : { seed: clip.seed }),
+    text: sentences
+      .slice(clip.first - 1, clip.last)
+      .map((sentence) => sentence.text)
+      .join(" "),
   };
 }
 
@@ -56,6 +59,11 @@ export function anchorKept(
       const closing = sentences[last - 1];
       if (opening === undefined || closing === undefined) continue;
       if (!same(opening.text, short.opening) || !same(closing.text, short.closing)) continue;
+      const text = sentences
+        .slice(first - 1, last)
+        .map((sentence) => sentence.text)
+        .join(" ");
+      if (short.text !== undefined && !same(text, short.text)) continue;
       if (taken(first, last)) continue;
       const bounds = clipBounds(sentences, first, last, durationSeconds);
       if (bounds === undefined) continue;
@@ -69,10 +77,7 @@ export function anchorKept(
         description: short.description,
         hashtags: short.hashtags,
         why: short.why,
-        text: sentences
-          .slice(first - 1, last)
-          .map((sentence) => sentence.text)
-          .join(" "),
+        text,
         ...(short.seed === undefined ? {} : { seed: short.seed }),
       };
     }
@@ -82,28 +87,52 @@ export function anchorKept(
   return { picks, lost };
 }
 
-// The kept shorts and the new ones together: kept 1…k, then the new ones as k+1… in the order
+// The kept shorts and the new ones together: each kept short keeps its number; the new ones
+// take the free numbers (a kept short's whose words changed first, then k+1…) in the order
 // they play, carrying `seed` (the pick's token).
 export function withNewPicks(
   kept: readonly ShortPick[],
   fresh: readonly ShortPick[],
   seed: string | null,
 ): readonly ShortPick[] {
+  const taken = new Set(kept.map((one) => one.number));
+  const free = Array.from({ length: kept.length + fresh.length }, (_value, at) => at + 1).filter(
+    (number) => !taken.has(number),
+  );
   return [
     ...kept,
     ...fresh
       .toSorted((left, right) => left.start - right.start)
-      .map((pick, index) => ({ ...pick, number: kept.length + index + 1, seed })),
-  ];
+      .map((pick, index) => ({ ...pick, number: free[index] ?? taken.size + index + 1, seed })),
+  ].toSorted((left, right) => left.number - right.number);
 }
 
-// Why the pick can't go on: kept shorts whose sentences changed in the narration.
-export function lostMessage(lost: readonly number[], kept: readonly KeptShort[]): string {
-  const names = lost
-    .map((at) => {
-      const short = kept[at - 1];
-      return short === undefined ? `short ${String(at)}` : `short ${String(at)} ("${short.title}")`;
-    })
-    .join(", ");
-  return `The narration of ${names} changed, so its moment can't be kept. Untick it under Keep finished shorts in ${editSettings.shorts}, so a new moment is picked for it, save, then use Choose what to make again (in the project's More menu).`;
+// Where a clip's sentences are in the narration as it is now: at the same numbers when they
+// still say the same, else wherever the same run of sentences is found once. Undefined when
+// its words are not in the narration any more.
+export function locateClip(
+  sentences: readonly PickedSentence[],
+  clip: Pick<ShortPick, "first" | "last" | "text">,
+  durationSeconds: number,
+):
+  | { readonly first: number; readonly last: number; readonly start: number; readonly end: number }
+  | undefined {
+  const count = clip.last - clip.first + 1;
+  const says = (first: number) =>
+    same(
+      sentences
+        .slice(first - 1, first - 1 + count)
+        .map((sentence) => sentence.text)
+        .join(" "),
+      clip.text,
+    );
+  const at = (first: number) => {
+    const bounds = clipBounds(sentences, first, first + count - 1, durationSeconds);
+    return bounds === undefined ? undefined : { first, last: first + count - 1, ...bounds };
+  };
+  if (count >= 1 && clip.last <= sentences.length && says(clip.first)) return at(clip.first);
+  const found: number[] = [];
+  for (let first = 1; first + count - 1 <= sentences.length; first++)
+    if (says(first)) found.push(first);
+  return found.length === 1 && found[0] !== undefined ? at(found[0]) : undefined;
 }

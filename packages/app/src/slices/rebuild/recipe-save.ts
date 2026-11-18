@@ -146,15 +146,24 @@ export function planRevision(
           },
         ],
       };
+    // A keep list only says which finished shorts outlast a new pick. An edit that picks
+    // nothing again (a new intro or outro, a prompt, a picture) keeps every short as it is,
+    // whatever list it sent: one sent with nothing ticked must not drop them all.
+    const { shortsKeep: _chosen, ...rest } = edit.content;
+    const kept = base.revision.content.shortsKeep;
+    const unchosen = planEdit(
+      base,
+      { ...edit, content: kept === undefined ? rest : { ...rest, shortsKeep: kept } },
+      prepared,
+      inspected,
+      false,
+    );
+    if (unchosen.ok && !picksAgain(base, unchosen)) return unchosen;
     return planEdit(base, edit, prepared, inspected, true);
   }
   const first = planEdit(base, edit, prepared, inspected, false);
   if (!first.ok) return first;
-  const before = base.pieces.find(
-    (row) => row.key === shortsPickKey && row.selected && row.piece.state === "done",
-  )?.fingerprint;
-  const after = first.fingerprints[shortsPickKey];
-  if (before === undefined || after === undefined || after === before) return first;
+  if (!picksAgain(base, first)) return first;
   const finished = finishedShorts(base);
   if (finished.length === 0) return first;
   return planEdit(
@@ -164,6 +173,19 @@ export function planRevision(
     inspected,
     true,
   );
+}
+
+// Whether a save's plan picks the moments again: its pick is another than the version's
+// finished one. Without a finished pick there is nothing to keep.
+function picksAgain(
+  base: RevisionView,
+  plan: Extract<RevisionPlanResult, { readonly ok: true }>,
+): boolean {
+  const before = base.pieces.find(
+    (row) => row.key === shortsPickKey && row.selected && row.piece.state === "done",
+  )?.fingerprint;
+  const after = plan.fingerprints[shortsPickKey];
+  return before !== undefined && after !== undefined && after !== before;
 }
 
 function planEdit(
