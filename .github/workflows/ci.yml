@@ -25,7 +25,8 @@ jobs:
       # The build is the release artifact: it is what copies packages/web's output into
       # the package that npm publishes, so a tag must never be the first time it runs.
       - run: npm run build
-      - run: npm audit --audit-level=high
+      # Only what the app ships: a dev-tool advisory with no fixed release (picomatch, Nov 2026) must not block releases.
+      - run: npm audit --audit-level=high --omit=dev
 
   # The suite split across five runners by file; the slowest shard sets the time, so an
   # integration file that grows past a couple of minutes is worth splitting.
