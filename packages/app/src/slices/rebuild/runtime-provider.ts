@@ -8,6 +8,7 @@ import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
+import { withoutProductionNote } from "../article/production-note.js";
 import { splitEndMatter } from "../article/split.js";
 import { checkAppearance } from "../images/appearance.js";
 import { checkScenes, sceneCountOf } from "../images/scenes.js";
@@ -442,7 +443,9 @@ async function publishText(
     return;
   }
   if (piece.key === "article:body") {
-    const parts = splitEndMatter(answer.text);
+    // A line the model wrote about its own work is never narrated.
+    const text = withoutProductionNote(answer.text);
+    const parts = splitEndMatter(text);
     // A script is read before it is kept: one the narration could not speak fails here, with
     // the line to fix, rather than at the narration.
     if (piece.input.kind === "llm" && piece.input.script !== undefined) {
@@ -458,12 +461,12 @@ async function publishText(
       piece,
       preparedTexts(deps, context, piece, [
         ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
-        ["article_md", "article.md", answer.text],
+        ["article_md", "article.md", text],
         ["article_txt", "article.txt", plainText(parts.body)],
         ...(parts.sources ? [["sources", "sources.md", parts.sources] as const] : []),
         ...(parts.glossary ? [["glossary", "glossary.md", parts.glossary] as const] : []),
       ]),
-      { text: answer.text },
+      { text },
     );
     return;
   }
@@ -517,6 +520,11 @@ async function publishText(
     await publishResult(deps, context, piece, [], { title, notes: answer.text }, asset);
     return;
   }
+  // The intro and outro are spoken too, so a note about the work goes from them as well.
+  const spoken =
+    piece.key === "entry:intro:text" || piece.key === "entry:outro:text"
+      ? withoutProductionNote(answer.text)
+      : answer.text;
   await publishResult(
     deps,
     context,
@@ -524,7 +532,7 @@ async function publishText(
     preparedTexts(deps, context, piece, [
       ["instructions", "instructions.md", frozenInstructions(deps, context, piece)],
     ]),
-    { text: answer.text, prompt: answer.text },
+    { text: spoken, prompt: spoken },
   );
 }
 
