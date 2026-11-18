@@ -68,6 +68,74 @@ describe("a save that keeps shorts", () => {
   });
 });
 
+// Five shorts picked, of which 1, 4 and 5 are rendered.
+const sentences = Array.from({ length: 20 }, (_value, at) => ({
+  start: at * 10,
+  end: at * 10 + 9.5,
+  text: `Sentence ${String(at + 1)}.`,
+}));
+const clip = (number: number) => ({
+  number,
+  first: number * 3,
+  last: number * 3 + 1,
+  start: (number * 3 - 1) * 10,
+  end: number * 3 * 10 + 9.75,
+  title: `Short ${String(number)}`,
+  description: "Line.",
+  hashtags: ["#Lore"],
+  why: "Stands alone.",
+  text: "",
+  seed: `seed-${String(number)}`,
+});
+// Five shorts picked, of which 1, 4 and 5 are rendered.
+function savedView(c: RunConfig, picked = "picked-before"): RevisionView {
+  const view = emptyView(c);
+  const view2 = {
+    ...view,
+    pieces: [
+      {
+        key: "shorts:pick",
+        stageKind: "video" as const,
+        assetId: null,
+        fingerprint: picked,
+        piece: {
+          id: "pick",
+          stageId: "video",
+          kind: "article_written" as const,
+          idx: 1,
+          state: "done" as const,
+          payload: JSON.stringify({
+            shorts: [1, 2, 3, 4, 5].map(clip),
+            durationSeconds: 200,
+            sentences,
+          }),
+        },
+        recordId: "pick",
+        publicationId: null,
+        selected: true,
+        available: true,
+      },
+    ],
+    outputs: [1, 4, 5].map((number) => ({
+      slot: `shorts:${String(number)}:render`,
+      workKey: `shorts:${String(number)}:render`,
+      assetId: `render-${String(number)}`,
+      output: {
+        kind: "video",
+        path: `short-${String(number)}.mp4`,
+        meta: { short: number, sentences: [number * 3, number * 3 + 1] },
+      },
+      fingerprint: `rendered-${String(number)}`,
+      state: "ready" as const,
+      recordId: `render-${String(number)}`,
+      publicationId: null,
+      selected: true,
+      available: true,
+    })),
+  };
+  return view2 as unknown as RevisionView;
+}
+
 describe("saving an edit that would pick the shorts again", () => {
   const five = {
     ...config,
@@ -75,72 +143,7 @@ describe("saving an edit that would pick the shorts again", () => {
     imageSeconds: 20,
     shorts: { enabled: true, count: 5, minSeconds: 15, maxSeconds: 60 },
   } satisfies RunConfig;
-  const sentences = Array.from({ length: 20 }, (_value, at) => ({
-    start: at * 10,
-    end: at * 10 + 9.5,
-    text: `Sentence ${String(at + 1)}.`,
-  }));
-  const clip = (number: number) => ({
-    number,
-    first: number * 3,
-    last: number * 3 + 1,
-    start: (number * 3 - 1) * 10,
-    end: number * 3 * 10 + 9.75,
-    title: `Short ${String(number)}`,
-    description: "Line.",
-    hashtags: ["#Lore"],
-    why: "Stands alone.",
-    text: "",
-    seed: `seed-${String(number)}`,
-  });
-  // Five shorts picked, of which 1, 4 and 5 are rendered.
-  function base(): RevisionView {
-    const view = emptyView(five);
-    const view2 = {
-      ...view,
-      pieces: [
-        {
-          key: "shorts:pick",
-          stageKind: "video" as const,
-          assetId: null,
-          fingerprint: "picked-before",
-          piece: {
-            id: "pick",
-            stageId: "video",
-            kind: "article_written" as const,
-            idx: 1,
-            state: "done" as const,
-            payload: JSON.stringify({
-              shorts: [1, 2, 3, 4, 5].map(clip),
-              durationSeconds: 200,
-              sentences,
-            }),
-          },
-          recordId: "pick",
-          publicationId: null,
-          selected: true,
-          available: true,
-        },
-      ],
-      outputs: [1, 4, 5].map((number) => ({
-        slot: `shorts:${String(number)}:render`,
-        workKey: `shorts:${String(number)}:render`,
-        assetId: `render-${String(number)}`,
-        output: {
-          kind: "video",
-          path: `short-${String(number)}.mp4`,
-          meta: { short: number, sentences: [number * 3, number * 3 + 1] },
-        },
-        fingerprint: `rendered-${String(number)}`,
-        state: "ready" as const,
-        recordId: `render-${String(number)}`,
-        publicationId: null,
-        selected: true,
-        available: true,
-      })),
-    };
-    return view2 as unknown as RevisionView;
-  }
+  const base = () => savedView(five);
 
   it("keeps the finished shorts, numbered 1, 2, 3, when the count drops to 3", () => {
     const plan = planRevision(base(), {
@@ -193,5 +196,57 @@ describe("saving an edit that would pick the shorts again", () => {
       [1, "Short 5"],
     ]);
     expect(chosen.shortMoves).toEqual([[5, 1]]);
+  });
+});
+
+describe("saving a new intro or outro over finished shorts", () => {
+  const framed = (intro: string, outro = "Thanks for listening."): RunConfig =>
+    ({
+      ...config,
+      sources: { ...config.sources, audio: "generate" },
+      imageSeconds: 20,
+      shorts: { enabled: true, count: 5, minSeconds: 15, maxSeconds: 60 },
+      intro: { name: "Intro", mode: "text" },
+      outro: { name: "Outro", mode: "text" },
+      rendered: { ...config.rendered, intro, outro },
+    }) as RunConfig;
+  const before = framed("Welcome to the channel.");
+  const after = framed("Welcome back. Find the book on the website.");
+  const pickOf = (c: RunConfig) => {
+    const plan = planRevision(emptyView(c), { config: c, content });
+    if (!plan.ok) throw new Error(JSON.stringify(plan.fields));
+    const pick = plan.fingerprints["shorts:pick"];
+    if (pick === undefined) throw new Error("Missing the pick");
+    return pick;
+  };
+  // The version as saved: its pick is the one its plan asks for, and 1, 4 and 5 are rendered.
+  const saved = () => savedView(before, pickOf(before));
+
+  it("keeps the pick and leaves the keep list alone when the edit sends none", () => {
+    const plan = planRevision(saved(), { config: after, content });
+    if (!plan.ok) throw new Error(JSON.stringify(plan.fields));
+    expect(plan.fingerprints["shorts:pick"]).toBe(pickOf(before));
+    expect(plan.content.shortsKeep).toBeUndefined();
+    // Short 4's finished render is carried over as it was.
+    expect(plan.manifest.outputs.find((row) => row.slot === "shorts:4:render")?.fingerprint).toBe(
+      "rendered-4",
+    );
+  });
+
+  it("ignores a keep list with nothing ticked, which would have picked every short again", () => {
+    const plan = planRevision(saved(), { config: after, content: { ...content, shortsKeep: [] } });
+    if (!plan.ok) throw new Error(JSON.stringify(plan.fields));
+    expect(plan.content.shortsKeep).toBeUndefined();
+    expect(plan.fingerprints["shorts:pick"]).toBe(pickOf(before));
+  });
+
+  it("still uses the list when the edit picks the moments again", () => {
+    const plan = planRevision(saved(), {
+      config: { ...after, shorts: { enabled: true, count: 3, minSeconds: 15, maxSeconds: 60 } },
+      content: { ...content, shortsKeep: [kept(5)] },
+    });
+    if (!plan.ok) throw new Error(JSON.stringify(plan.fields));
+    expect(plan.content.shortsKeep?.map((one) => one.title)).toEqual(["Short 5"]);
+    expect(plan.fingerprints["shorts:pick"]).not.toBe(pickOf(before));
   });
 });

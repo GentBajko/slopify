@@ -34,10 +34,11 @@ import { checkImagePrompts } from "../shorts/prompts.js";
 import { renderShort, type ShortMusic } from "../shorts/render.js";
 import { allocateAsset, discardPreparedAssets, sealAsset, writeAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
+import type { AudioSegment } from "../video/edit-list.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { usesVoices } from "../voices/model.js";
 import { sentencesText, transcriptSentences } from "../youtube/transcript.js";
-import { shortsPickKey } from "./recipe-shorts.js";
+import { onBodyClock, shortsPickKey } from "./recipe-shorts.js";
 import { type ExportExecutionDeps, exportMachine, warningsOf } from "./runtime-export.js";
 import { figureShots } from "./runtime-export-edit.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
@@ -95,15 +96,17 @@ async function pick(
     throw new Error(
       `Shorts need an AI model to pick the clips, and none is chosen. Choose a Service and a Model in ${editSettings.writer}, then Try again.`,
     );
-  const sentences = transcriptSentences(
-    readTimingWords(deps, context, view, shortsTimingPurpose).words,
-  );
+  const audio = await revisionAudio(deps, context, view);
+  const words = readTimingWords(deps, context, view, shortsTimingPurpose).words;
+  // On the body's clock the moments are picked from the body alone, timed from its start, so
+  // a new intro or outro leaves them where they are (`recipe-shorts.ts`).
+  const body = onBodyClock(input.values) ? bodyWindow(audio) : undefined;
+  const sentences = transcriptSentences(body === undefined ? words : bodyWords(words, body));
   if (sentences.length === 0)
     throw new Error(
       "The narration's word timing holds no words, so there is nothing to cut shorts from. Press Make the video again in the project's Video section, then Try again.",
     );
-  const audio = await revisionAudio(deps, context, view);
-  const durationSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
+  const durationSeconds = body?.seconds ?? audio.reduce((sum, segment) => sum + segment.seconds, 0);
   // Kept shorts are found again in this timing; the model is asked only for the rest.
   const keep = view.revision.content.shortsKeep;
   const anchored =
@@ -334,17 +337,25 @@ async function render(
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
   const allWords = readTimingWords(deps, context, view, shortsTimingPurpose).words;
-  const words = clipWords(allWords, clip.start, clip.end);
+  // A clip on the body's clock is found where the body starts now, after whatever intro.
+  const input = piece.input;
+  const offset =
+    input.kind === "local" && onBodyClock(input.values)
+      ? bodyWindow(await revisionAudio(deps, context, view)).start
+      : 0;
+  const start = clip.start + offset;
+  const end = clip.end + offset;
+  const words = clipWords(allWords, start, end);
   // The upright cards whose descriptions fall in the clip, on the clip's own timeline.
   const figures = usesFigureCards(config)
     ? figureShots(deps, context, view, "9:16", allWords).flatMap((figure) =>
-        figure.end <= clip.start || figure.start >= clip.end
+        figure.end <= start || figure.start >= end
           ? []
           : [
               {
                 path: figure.path,
-                start: Math.max(0, figure.start - clip.start),
-                end: Math.min(clip.end, figure.end) - clip.start,
+                start: Math.max(0, figure.start - start),
+                end: Math.min(end, figure.end) - start,
               },
             ],
       )
@@ -372,8 +383,8 @@ async function render(
       notice: machine.notice,
       master: masterGoal(config, "video"),
       timeline,
-      start: clip.start,
-      end: clip.end,
+      start,
+      end,
       images,
       imageSeconds: config.imageSeconds,
       motionStyle: config.motionStyle,
@@ -483,6 +494,36 @@ async function backgroundMusic(
   }
   if (durationMs <= 0) throw new Error(`The shorts' background music file holds no sound. ${fix}`);
   return { path, volume: musicVolumeOf(shorts) };
+}
+
+// Where the body sits on the video's timeline: after the edge silence, the intro and the gap
+// after it. The word timing is on this clock (`runtime-subtitles.ts`).
+export function bodyWindow(audio: readonly AudioSegment[]): {
+  readonly start: number;
+  readonly seconds: number;
+} {
+  const at = audio.findIndex((segment) => segment.kind === "body");
+  const body = audio[at];
+  if (body === undefined) throw setupError();
+  return {
+    start: audio.slice(0, at).reduce((sum, segment) => sum + segment.seconds, 0),
+    seconds: body.seconds,
+  };
+}
+
+// The body's words, timed from the body's start (to the microsecond, so the same body reads
+// the same times after any intro).
+export function bodyWords<T extends { readonly start: number; readonly end: number }>(
+  words: readonly T[],
+  body: { readonly start: number; readonly seconds: number },
+): readonly T[] {
+  const from = (seconds: number) => Math.max(0, Math.round((seconds - body.start) * 1e6) / 1e6);
+  return words.flatMap((word) => {
+    const middle = (word.start + word.end) / 2 - body.start;
+    return middle < 0 || middle > body.seconds
+      ? []
+      : [{ ...word, start: from(word.start), end: from(word.end) }];
+  });
 }
 
 // What the shorts read the narration's word timing for, in the sentence a missing one fails with.

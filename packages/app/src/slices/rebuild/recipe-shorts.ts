@@ -37,8 +37,17 @@ import { llmInput, promptOf } from "./recipe-text.js";
 // clip was first picked, plus the one "Make this short again" renews under `shorts:N`. So
 // picking the moments again redoes only the clips whose sentences changed, and one short
 // can be made again alone.
+//
+// Shorts are cut from the body only, on the body's own clock (`bodyTiming`): the pick reads
+// the body's words with times from the body's start, and its fingerprint holds the body's
+// narration and timing, not the intro's or outro's. A new intro or outro moves every word of
+// the video's timing, yet leaves the pick, each clip's prompts and images, and its render as
+// they are; the render finds the body where it now starts. A pick saved before this, on the
+// video's clock, is kept while the timing it read is unchanged (`legacy` below).
 export const shortsPickKey = "shorts:pick";
 export const shortsFutureKey = "shorts:future";
+// The first value of a pick and a render on the body's clock.
+export const bodyClockValue = "body-clock-v1";
 
 export function shortsRecipes(
   context: RecipeContext,
@@ -51,6 +60,8 @@ export function shortsRecipes(
   master: MasterPlan = noMaster,
   // How the figures look, for a shorts image prompt with `{{Appearance}}` (`recipe-appearance.ts`).
   appearance?: ImageAppearance,
+  // Level the volume for the body alone: what a short on the body's clock plays.
+  bodyMaster: MasterPlan = master,
 ): readonly ResolvedWorkRecipe[] {
   const { config } = context;
   const shorts = config.shorts;
@@ -109,7 +120,8 @@ export function shortsRecipes(
       // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
       { kind: "provider" },
     );
-  const pick = pickFor(resourceIdentity(context, timing));
+  // A pick saved on the video's clock, asked of the whole timing: kept while it still matches.
+  const legacy = pickFor(resourceIdentity(context, timing));
   // The same pick asked of the finished timing as it was recorded: a run's plan reads the
   // catalogue, which gives the timing another fingerprint than the one the version was saved
   // with, while the timing file is the same.
@@ -122,11 +134,20 @@ export function shortsRecipes(
       row.fingerprint !== timing.fingerprint &&
       selectedReference(row),
   );
-  const picked = savedPicked(
+  const legacyPicked = savedPicked(
     context,
-    pick,
+    legacy,
     recorded === undefined ? [] : [pickFor([recorded.fingerprint, asset]).fingerprint],
   );
+  const body = bodyTiming(timing);
+  const onBody = legacyPicked === undefined && body !== undefined;
+  const pick = onBody ? pickFor(body) : legacy;
+  const picked = onBody ? savedPicked(context, pick) : legacyPicked;
+  // What a render on each clock reads the narration by: the body's timing and its levelled
+  // sound, or the whole timing and every levelled part.
+  const heard = onBody
+    ? { timing: body, master: bodyMaster }
+    : { timing: resourceIdentity(context, timing), master };
   const images = config.images ?? { provider: "", model: "" };
   const style = styled === undefined ? defaultShortsImagePrompt : withoutScene(styled.text);
   if (picked === undefined)
@@ -242,7 +263,7 @@ export function shortsRecipes(
           version: 1,
           operation: "short-render-v1",
           values: [
-            resourceIdentity(context, timing),
+            heard.timing,
             clip.number,
             clip.start,
             clip.end,
@@ -259,20 +280,58 @@ export function shortsRecipes(
               ? []
               : [["figure-cards-v1", cards.map((card) => resourceIdentity(context, card))]]),
             // Only while the volume is levelled, so every short without it keeps its fingerprint.
-            ...master.values,
+            ...heard.master.values,
           ],
         },
         [
           pick.key,
           ...stills.map((still) => still.key),
           ...cards.map((card) => card.key),
-          ...master.keys,
+          ...heard.master.keys,
         ],
         { token },
       ),
     );
   }
   return recipes;
+}
+
+// What the shorts' pick reads on the body's clock: the body's narration as the word timing was
+// made from it (its file once it is made, else its recipe, with what it says), and how the
+// words are timed. Not the intro or outro, the silence between them or at the edges: those
+// move the body's words on the video's clock and not on its own. Undefined when the timing
+// has no body to find.
+export function bodyTiming(
+  timing: Pick<ResolvedWorkRecipe, "input" | "dependsOn">,
+): FingerprintValue | undefined {
+  if (timing.input.kind !== "local" || !Array.isArray(timing.input.values)) return undefined;
+  const values: readonly FingerprintValue[] = timing.input.values;
+  const [timeline, , language, , ...words] = values;
+  const at = timing.dependsOn.findIndex((key) => key !== "audio:intro" && key !== "audio:outro");
+  if (!Array.isArray(timeline) || at < 0) return undefined;
+  const entries: readonly FingerprintValue[] = timeline;
+  const entry = entries[at];
+  if (!isRecord(entry)) return undefined;
+  const audio = entry.audio;
+  const file = Array.isArray(audio) && typeof audio[1] === "string" ? audio[1] : undefined;
+  return [
+    bodyClockValue,
+    timing.input.operation,
+    file === undefined ? entry : ["file", file, entry.transcript ?? null],
+    language ?? null,
+    ...words,
+  ];
+}
+
+function isRecord(
+  value: FingerprintValue | undefined,
+): value is { readonly [key: string]: FingerprintValue } {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Whether a pick's or a render's values are on the body's clock.
+export function onBodyClock(values: FingerprintValue): boolean {
+  return Array.isArray(values) && Array.isArray(values[0]) && values[0][0] === bodyClockValue;
 }
 
 // What the render draws and plays beyond the clip itself: the title headline, a faster

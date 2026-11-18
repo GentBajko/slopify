@@ -47,8 +47,10 @@ describe("project language and the recipes", () => {
     expect(fingerprints(english)["subtitles:timing"]).toBe(
       "1b9f060f9a8b23071ef4695c259414c6b83af82d225071bc6416c0af6086ed0e",
     );
+    // Updated once when shorts moved to the body's clock (2026-11-18): only the not-yet-made
+    // `shorts:pick` and `shorts:future` changed; a pick already made keeps its fingerprint.
     expect(digest(english)).toBe(
-      "89d3e4c00f343375bfa130491dcd3bc1f7ffcb4e6969f931852bcf4d86ef6553",
+      "47acd2cea3ba6ffe318a7a3d2f83a5a27801b585562a03877579a9e032aff0aa",
     );
     expect(fingerprints({ ...english, language: "en" })).toEqual(fingerprints(english));
   });
