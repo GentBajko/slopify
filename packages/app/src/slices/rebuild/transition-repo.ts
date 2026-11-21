@@ -99,21 +99,23 @@ export function transitionRevisionWork(
         if (own !== undefined) carried.add(row.work_key);
       }
     }
-    const live = db.prepare("SELECT id FROM revision_work WHERE project_id=?").all(input.projectId);
-    for (const row of live) {
-      const id = z.string().parse(row.id);
-      db.prepare(
-        `UPDATE revision_work_pieces SET dispatch_state=CASE WHEN submitted_at IS NOT NULL THEN 'draining' ELSE 'held' END WHERE work_id=? AND state!='done' AND id NOT IN (SELECT piece_id FROM revision_work_reservations WHERE revision_id=? AND piece_id IS NOT NULL)`,
-      ).run(id, input.revisionId);
-      const keeps =
-        db
-          .prepare("SELECT 1 FROM revision_work_reservations WHERE revision_id=? AND work_id=?")
-          .get(input.revisionId, id) !== undefined;
-      if (!keeps)
-        db.prepare(
-          `UPDATE revision_work SET dispatch_state=CASE WHEN EXISTS(SELECT 1 FROM attempts WHERE work_id=?) OR EXISTS(SELECT 1 FROM revision_work_pieces WHERE work_id=? AND submitted_at IS NOT NULL) THEN 'draining' ELSE 'held' END WHERE id=? AND state!='done'`,
-        ).run(id, id, id);
-    }
+    // Every step of the project the new version doesn't keep: its unfinished pieces and the
+    // step itself are held, or draining once something of them was sent or attempted. Two
+    // statements over the whole project, not three per step: a project made a few times over
+    // has thousands of steps, and the save held the server for seconds.
+    db.prepare(
+      `UPDATE revision_work_pieces SET dispatch_state=CASE WHEN submitted_at IS NOT NULL THEN 'draining' ELSE 'held' END
+       WHERE work_id IN (SELECT id FROM revision_work WHERE project_id=?) AND state!='done'
+       AND id NOT IN (SELECT piece_id FROM revision_work_reservations WHERE revision_id=? AND piece_id IS NOT NULL)`,
+    ).run(input.projectId, input.revisionId);
+    db.prepare(
+      `UPDATE revision_work SET dispatch_state=CASE
+         WHEN EXISTS(SELECT 1 FROM attempts a WHERE a.work_id=revision_work.id)
+           OR EXISTS(SELECT 1 FROM revision_work_pieces p WHERE p.work_id=revision_work.id AND p.submitted_at IS NOT NULL)
+         THEN 'draining' ELSE 'held' END
+       WHERE project_id=? AND state!='done'
+       AND NOT EXISTS(SELECT 1 FROM revision_work_reservations r WHERE r.revision_id=? AND r.work_id=revision_work.id)`,
+    ).run(input.projectId, input.revisionId);
     db.prepare(
       `DELETE FROM revision_work_reservations WHERE project_id=? AND revision_id=? AND work_key NOT IN (SELECT work_key FROM revision_work_reservations WHERE revision_id=?)`,
     ).run(input.projectId, input.baseRevisionId, input.revisionId);

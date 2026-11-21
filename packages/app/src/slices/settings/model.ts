@@ -41,8 +41,14 @@ export function isLocalCliProvider(id: string): id is HostCliId {
 
 // How many calls to a command-line tool run at once. Each Codex image is its own job - its
 // own folder and thread - so four are drawn side by side; the text CLIs keep three.
-export function localCliConcurrency(id: HostCliId): number {
-  return id === "codex-image" ? 4 : 3;
+// SLOPIFY_CODEX_IMAGES_AT_ONCE (1 to 8) draws more or fewer when the account allows it.
+export function localCliConcurrency(
+  id: HostCliId,
+  env: Readonly<Record<string, string | undefined>>,
+): number {
+  if (id !== "codex-image") return 3;
+  const asked = env.SLOPIFY_CODEX_IMAGES_AT_ONCE ?? "";
+  return /^[1-8]$/.test(asked) ? Number(asked) : 4;
 }
 
 interface ProviderBase {

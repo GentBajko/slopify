@@ -126,15 +126,59 @@ export function preparationForGroup(
   );
   if (saved?.piece.payload === undefined || saved.piece.payload === null)
     return { preparation, requests: null, refusal: null };
-  const payload = z.object({ text: z.string() }).safeParse(JSON.parse(saved.piece.payload));
+  return {
+    preparation,
+    ...savedRequests(
+      saved.piece.payload,
+      source,
+      context.catalogue === undefined ? null : maxCharacters,
+      spans,
+    ),
+  };
+}
+
+// What a saved preparation answer turns into: checked against the chunk's words and cut into
+// the requests the narration sends. Pure text work over the whole chunk, asked again for every
+// chunk each time the plan is derived (after every finished step of a run), so the last answers
+// are kept by their exact inputs: the saved answer, the chunk, its character limit (null: as
+// long as the chunk itself needs) and its pronunciations.
+type SavedRequests = Pick<PreparedGroup, "requests" | "refusal">;
+const rememberedAnswers = 1024;
+const savedAnswers = new Map<string, SavedRequests>();
+function savedRequests(
+  answer: string,
+  source: string,
+  maxCharacters: number | null,
+  spans: ReturnType<typeof pronunciationSpans>,
+): SavedRequests {
+  const key = JSON.stringify([answer, source, maxCharacters, spans]);
+  const known = savedAnswers.get(key);
+  if (known !== undefined) {
+    savedAnswers.delete(key);
+    savedAnswers.set(key, known);
+    return known;
+  }
+  const value = prepareSaved(answer, source, maxCharacters, spans);
+  savedAnswers.set(key, value);
+  if (savedAnswers.size > rememberedAnswers)
+    savedAnswers.delete(savedAnswers.keys().next().value as string);
+  return value;
+}
+function prepareSaved(
+  answer: string,
+  source: string,
+  maxCharacters: number | null,
+  spans: ReturnType<typeof pronunciationSpans>,
+): SavedRequests {
+  const payload = z.object({ text: z.string() }).safeParse(JSON.parse(answer));
   if (!payload.success)
-    return { preparation, requests: null, refusal: "Saved narration preparation is incomplete." };
+    return { requests: null, refusal: "Saved narration preparation is incomplete." };
   const validated = validatePreparation(payload.data.text, source);
-  if (!validated.ok) return { preparation, requests: null, refusal: validated.reason };
+  if (!validated.ok) return { requests: null, refusal: validated.reason };
   const prepared = prepareRequests(
     source,
     validated.cues,
-    context.catalogue === undefined
+    maxCharacters === null
       ? Math.max(
           2,
           source.length +
@@ -151,6 +195,6 @@ export function preparationForGroup(
     spans,
   );
   return prepared.ok
-    ? { preparation, requests: prepared.requests, refusal: null }
-    : { preparation, requests: null, refusal: prepared.reason };
+    ? { requests: prepared.requests, refusal: null }
+    : { requests: null, refusal: prepared.reason };
 }

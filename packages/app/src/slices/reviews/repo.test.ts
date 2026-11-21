@@ -3,7 +3,14 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { ReviewRecord } from "./model.js";
-import { actOnVerdict, latestVerdict, pendingRedos, saveVerdict, setRedoState } from "./repo.js";
+import {
+  actOnVerdict,
+  latestVerdict,
+  pendingRedos,
+  reviewedSameFile,
+  saveVerdict,
+  setRedoState,
+} from "./repo.js";
 import { latestReviews } from "./view.js";
 
 const db = openDb(":memory:");
@@ -115,5 +122,66 @@ describe("review verdicts", () => {
       reason: "decided",
     });
     expect(latestVerdict(db, "p1", "image:hill")?.actionAt).toBe("t1");
+  });
+});
+
+describe("the file a verdict looked at", () => {
+  const revision = (id: string, parent: string | null) =>
+    db
+      .prepare(
+        "INSERT INTO project_revisions(id,project_id,parent_id,config,content,fingerprints,created_at) VALUES (?,?,?,?,?,?,?)",
+      )
+      .run(id, "p1", parent, "{}", "{}", "{}", "now");
+  const output = (id: string, revisionId: string, assetId: string, fingerprint: string) =>
+    db
+      .prepare(
+        "INSERT INTO revision_outputs(id,project_id,revision_id,slot,work_key,asset_id,fingerprint,state,descriptor,selected,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+      )
+      .run(
+        id,
+        "p1",
+        revisionId,
+        "article:article_md",
+        "article:body",
+        assetId,
+        fingerprint,
+        "ready",
+        "{}",
+        1,
+        "now",
+      );
+  revision("rv1", null);
+  revision("rv2", "rv1");
+  for (const asset of ["a-kept", "a-new"])
+    db.prepare("INSERT INTO project_assets VALUES (?,?,?,?,?)").run(
+      asset,
+      "p1",
+      `${asset}.md`,
+      1,
+      "now",
+    );
+  output("o1", "rv1", "a-kept", "fp-settling");
+  output("o2", "rv2", "a-kept", "fp-planned");
+  const verdict = {
+    ...failed,
+    revisionId: "rv1",
+    itemKey: "article:body",
+    stage: "article" as const,
+    itemFingerprint: "fp-settling",
+  };
+
+  it("knows the same file under the fingerprint a later version stamped it with", () => {
+    expect(reviewedSameFile(db, verdict, "rv2", "fp-planned")).toBe(true);
+    // The promise check looks at the article too.
+    expect(reviewedSameFile(db, { ...verdict, itemKey: "promise" }, "rv2", "fp-planned")).toBe(
+      true,
+    );
+  });
+
+  it("tells a rewritten article apart", () => {
+    revision("rv3", "rv2");
+    output("o3", "rv3", "a-new", "fp-rewritten");
+    expect(reviewedSameFile(db, verdict, "rv3", "fp-rewritten")).toBe(false);
+    expect(reviewedSameFile(db, verdict, "rv2", "fp-unknown")).toBe(false);
   });
 });

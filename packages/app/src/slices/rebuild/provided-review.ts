@@ -18,22 +18,40 @@ export function providedDependencyFingerprint(plan: RevisionWorkPlan, key: strin
         : null,
   });
 }
+// The reviews of provided content saved for a version: each step's key and the inputs it was
+// reviewed against.
+export interface ProvidedReview {
+  readonly workKey: string;
+  readonly dependencyFingerprint: unknown;
+}
+export function providedReviews(db: DatabaseSync, revisionId: string): readonly ProvidedReview[] {
+  return db
+    .prepare(
+      "SELECT work_key,dependency_fingerprint FROM revision_provided_reviews WHERE revision_id=?",
+    )
+    .all(revisionId)
+    .map((row) => ({
+      workKey: String(row.work_key),
+      dependencyFingerprint: row.dependency_fingerprint,
+    }));
+}
 export function applyProvidedReviews(
   db: DatabaseSync,
   revisionId: string,
   plan: RevisionWorkPlan,
 ): RevisionWorkPlan {
+  return applyReviews(providedReviews(db, revisionId), plan);
+}
+export function applyReviews(
+  reviews: readonly ProvidedReview[],
+  plan: RevisionWorkPlan,
+): RevisionWorkPlan {
   const approved = new Set(
-    db
-      .prepare(
-        "SELECT work_key,dependency_fingerprint FROM revision_provided_reviews WHERE revision_id=?",
-      )
-      .all(revisionId)
+    reviews
       .filter(
-        (row) =>
-          row.dependency_fingerprint === providedDependencyFingerprint(plan, String(row.work_key)),
+        (row) => row.dependencyFingerprint === providedDependencyFingerprint(plan, row.workKey),
       )
-      .map((row) => String(row.work_key)),
+      .map((row) => row.workKey),
   );
   return {
     ...plan,

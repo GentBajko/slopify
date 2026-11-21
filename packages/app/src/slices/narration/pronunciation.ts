@@ -277,13 +277,53 @@ export interface PronunciationMatch {
   // The "'s" or "’s" that follows the term, inside the match; absent without one.
   readonly possessive?: string;
 }
-// Remembered (`kernel/remembered.ts`): every plan rebuild matches the whole narration again.
-export const pronunciationMatches = remembered(
-  1024,
-  (source: string, entries: readonly GlossaryEntry[], possessives?: boolean) =>
-    `${possessives === true ? "p" : "-"}\u0000${source}\u0000${JSON.stringify(entries)}`,
-  matchPronunciations,
-);
+// Remembered: every plan rebuild matches the whole narration again, chunk by chunk, and a plan
+// is derived again after every finished step of a run. The answers are kept per glossary, then
+// per text. A glossary is known by its contents, written out once per array it arrives in (the
+// parsed glossary is itself remembered, so that is once per glossary): writing it out and
+// gluing it to the narration on every call was most of the matching's cost.
+const glossaryKeys = new WeakMap<
+  readonly GlossaryEntry[],
+  { readonly length: number; readonly key: string }
+>();
+function glossaryKey(entries: readonly GlossaryEntry[]): string {
+  const known = glossaryKeys.get(entries);
+  // The length too: an array is never changed once made, but one that grew is not the same.
+  if (known !== undefined && known.length === entries.length) return known.key;
+  const key = JSON.stringify(entries);
+  glossaryKeys.set(entries, { length: entries.length, key });
+  return key;
+}
+// ceilings: glossaries kept at once (a run's projects, each with and without possessives), and
+// texts kept per glossary (a narration's chunks and the whole of it, for a few projects).
+const rememberedGlossaries = 16;
+const rememberedTexts = 1024;
+// A pure function of a text and a glossary, remembered per glossary and then per text.
+function byGlossary<T>(
+  work: (source: string, entries: readonly GlossaryEntry[], possessives: boolean) => T,
+): (source: string, entries: readonly GlossaryEntry[], possessives?: boolean) => T {
+  const byKey = new Map<string, Map<string, T>>();
+  return (source, entries, possessives = false) => {
+    const glossary = `${possessives ? "p" : "-"}${glossaryKey(entries)}`;
+    let texts = byKey.get(glossary);
+    if (texts === undefined) {
+      texts = new Map();
+      byKey.set(glossary, texts);
+      if (byKey.size > rememberedGlossaries) byKey.delete(byKey.keys().next().value as string);
+    }
+    if (texts.has(source)) {
+      const known = texts.get(source) as T;
+      texts.delete(source);
+      texts.set(source, known);
+      return known;
+    }
+    const value = work(source, entries, possessives);
+    texts.set(source, value);
+    if (texts.size > rememberedTexts) texts.delete(texts.keys().next().value as string);
+    return value;
+  };
+}
+export const pronunciationMatches = byGlossary(matchPronunciations);
 function matchPronunciations(
   source: string,
   entries: readonly GlossaryEntry[],
@@ -338,10 +378,12 @@ function withPossessive(ipa: string): string {
   if ("sz\u0283\u0292".includes(last)) return `${ipa}\u026az`;
   return `${ipa}${"ptkfθ".includes(last) ? "s" : "z"}`;
 }
-export function pronunciationSpans(
+// Remembered like the matches: asked again for every chunk each time the plan is derived.
+export const pronunciationSpans = byGlossary(spansOf);
+function spansOf(
   source: string,
   entries: readonly GlossaryEntry[],
-  possessives = false,
+  possessives: boolean,
 ): readonly PronunciationSpan[] {
   const spans: PronunciationSpan[] = [];
   for (const match of pronunciationMatches(source, entries, possessives)) {

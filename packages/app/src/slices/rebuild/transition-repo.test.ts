@@ -2,7 +2,7 @@ import { afterEach, expect, it } from "vitest";
 import { transact } from "../../kernel/db/tx.js";
 import { maySubmit, publicationTargets, transitionRevisionWork } from "./repo.js";
 import { workFixture } from "./work.fake.js";
-import { workPieces } from "./work-records.js";
+import { insertWorkPiece, workPieces } from "./work-records.js";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -270,4 +270,102 @@ it("reserves a finished row with the same fingerprint instead of minting a held 
       .all(),
   ).toEqual([{ work_id: "w1", piece_id: "piece1" }]);
   expect(deps.db.prepare("SELECT count(*) AS n FROM revision_work").get()).toEqual({ n: 2 });
+});
+
+// A save holds or drains every earlier step of the project that the new version doesn't
+// keep. A project made a few times over has thousands of them, and doing it one step at a
+// time (three statements each, one scanning every attempt ever made) held the server for
+// seconds on every automatic redo.
+it("holds and drains a project's earlier work in a few statements, however much it has", async () => {
+  const { deps, work, nextRevision } = await fixture();
+  const db = deps.db;
+  const rows = 60;
+  for (let n = 0; n < rows; n++) {
+    const state = n % 4 === 0 ? "done" : "pending";
+    db.prepare(
+      `INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES (?,?,?,?,?,?,?,'allowed','now')`,
+    ).run(`old${n}`, work.projectId, work.revisionId, work.stageId, work.kind, "fp", state);
+    insertWorkPiece(db, {
+      id: `oldpiece${n}`,
+      workId: `old${n}`,
+      key: `image:old${n}`,
+      requestFingerprint: "request",
+      fingerprint: "fp",
+      input: {
+        kind: "image",
+        version: 1,
+        provider: "fake",
+        model: "m",
+        prompt: "p",
+        aspect: "16:9",
+      },
+      continuation: null,
+      generationToken: null,
+      state: state === "done" ? "done" : "pending",
+      dispatchState: "allowed",
+      submittedAt: n % 4 === 1 ? "sent" : null,
+    });
+    if (n % 4 === 2)
+      db.prepare(
+        "INSERT INTO attempts(id,stage_id,n,started_at,work_id,work_piece_id) VALUES (?,?,1,'now',?,?)",
+      ).run(`attempt${n}`, work.stageId, `old${n}`, `oldpiece${n}`);
+  }
+  nextRevision("next", { "image:i1": "old" });
+  const statements: string[] = [];
+  const prepare = db.prepare.bind(db);
+  Object.defineProperty(db, "prepare", {
+    configurable: true,
+    writable: true,
+    value: (sql: string) => {
+      statements.push(sql);
+      return prepare(sql);
+    },
+  });
+  try {
+    transitionRevisionWork(deps, {
+      projectId: work.projectId,
+      baseRevisionId: work.revisionId,
+      revisionId: "next",
+      fingerprints: { "image:i1": "old" },
+    });
+  } finally {
+    delete (db as unknown as { prepare?: unknown }).prepare;
+  }
+  // The kept step is carried; every other unfinished one is held, or draining when something
+  // of it was already sent or attempted; finished ones are left as they are.
+  const states = Object.fromEntries(
+    db
+      .prepare("SELECT id,dispatch_state FROM revision_work WHERE id LIKE 'old%'")
+      .all()
+      .map((row) => [String(row.id), String(row.dispatch_state)]),
+  );
+  for (let n = 0; n < rows; n++)
+    expect([n, states[`old${n}`]]).toEqual([
+      n,
+      n % 4 === 0 ? "allowed" : n % 4 === 3 ? "held" : "draining",
+    ]);
+  const pieces = Object.fromEntries(
+    db
+      .prepare("SELECT id,dispatch_state FROM revision_work_pieces WHERE id LIKE 'oldpiece%'")
+      .all()
+      .map((row) => [String(row.id), String(row.dispatch_state)]),
+  );
+  for (let n = 0; n < rows; n++)
+    expect([n, pieces[`oldpiece${n}`]]).toEqual([
+      n,
+      n % 4 === 0 ? "allowed" : n % 4 === 1 ? "draining" : "held",
+    ]);
+  expect(maySubmit(db, work, "piece1")).toBe(true);
+  const updates = statements.filter((sql) => /^\s*UPDATE revision_work/u.test(sql));
+  expect(updates.length).toBeLessThanOrEqual(2);
+  const scans = statements
+    .filter((sql) => /attempts/u.test(sql))
+    .flatMap((sql) =>
+      db
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all(...Array.from({ length: (sql.match(/\?/gu) ?? []).length }, () => "x"))
+        .map((row) => String(row.detail))
+        .filter((detail) => /^SCAN attempts\b|^SCAN a\b/u.test(detail)),
+    );
+  expect(scans).toEqual([]);
 });

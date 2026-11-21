@@ -1,5 +1,6 @@
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { mapPieces } from "../narration/piece-jobs.js";
 import { type FfmpegRun, levelFile, measurable } from "./loudnorm.js";
 import { type LoudnessReport, pieceLufs, pieceTruePeak, spreadOf } from "./model.js";
 import { lowerLoudPhrases, phrasePasses } from "./phrase-level.js";
@@ -22,12 +23,8 @@ export async function levelPieces(
   options: { readonly phrases: boolean } = { phrases: true },
 ): Promise<{ readonly files: readonly string[]; readonly report: LoudnessReport }> {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const levelled: string[] = [];
-  const before: number[] = [];
-  const after: number[] = [];
-  let skipped = 0;
-  for (const [index, file] of files.entries()) {
-    run.signal.throwIfAborted();
+  // Each piece on its own, several at once (`narration/piece-jobs.ts`), the report made in order.
+  const results = await mapPieces(run, files, async (file, index, own) => {
     const output = join(directory, `piece-${String(index + 1).padStart(4, "0")}.wav`);
     // A phrase that bursts out above the narration around it (most of all a request's first
     // words) comes down first, twice: once loud phrases are lowered, the narration's loud words
@@ -36,12 +33,19 @@ export async function levelPieces(
     const made: string[] = [];
     for (let pass = 1; options.phrases && pass <= phrasePasses; pass++) {
       const phrased = `${output}.phrases-${String(pass)}.wav`;
-      if (!(await lowerLoudPhrases(run, source, phrased))) break;
+      if (!(await lowerLoudPhrases(own, source, phrased))) break;
       made.push(phrased);
       source = phrased;
     }
-    const measured = await levelFile(run, source, output, goal, format);
+    const measured = await levelFile(own, source, output, goal, format);
     for (const one of made) rmSync(one, { force: true });
+    return { output, measured };
+  });
+  const levelled: string[] = [];
+  const before: number[] = [];
+  const after: number[] = [];
+  let skipped = 0;
+  for (const { output, measured } of results) {
     levelled.push(output);
     if (!measurable(measured.before)) {
       skipped += 1;

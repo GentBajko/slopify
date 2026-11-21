@@ -90,8 +90,20 @@ export function exportRecipes(
       )
     );
   };
+  // The softening variants plan the whole narration again each, on every plan rebuild: look for
+  // one only when the project has a finished timing at all.
+  const anyDoneTiming = () => {
+    const past = context.history ?? context.manifest;
+    return (
+      past.pieces.some((row) => row.key === "subtitles:timing" && row.piece.state === "done") ||
+      past.outputs.some(
+        (row) =>
+          row.workKey === "subtitles:timing" && (row.state === "ready" || row.state === "outdated"),
+      )
+    );
+  };
   const timing =
-    timedNow === undefined || doneTiming(timedNow.fingerprint)
+    timedNow === undefined || doneTiming(timedNow.fingerprint) || !anyDoneTiming()
       ? timedNow
       : (unsoftened()
           .map(timingOf)

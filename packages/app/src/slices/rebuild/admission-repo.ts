@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
 import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
 import { internalError } from "../../kernel/errors.js";
@@ -93,9 +93,9 @@ export function admitPreview(
     const workIds: string[] = [];
     for (const recipe of snapshot.recipes) {
       const disposition = snapshot.dispositions.find((row) => row.key === recipe.key)?.disposition;
-      const existing = deps.db
+      const existing: Record<string, SQLOutputValue> | undefined = deps.db
         .prepare(
-          `SELECT w.id,w.state,w.recipe_context,r.piece_id,r.fingerprint FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.revision_id=? AND r.work_key=?`,
+          `SELECT w.id,w.state,w.recipe_context,r.piece_id,r.fingerprint,r.logical_key FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.revision_id=? AND r.work_key=?`,
         )
         .get(view.revision.id, recipe.key);
       if (disposition === "reuse") {
@@ -108,6 +108,23 @@ export function admitPreview(
         existing.state !== "done"
       ) {
         workIds.push(String(existing.id));
+        // A step reserved under a key this version's plan doesn't list (a picture check
+        // admitted under its own key before it was held to its picture) was never the
+        // version's to run, so a restart left it held for good: it takes the starting point a
+        // new one would. One whose key is listed under another fingerprint stays held below.
+        const own = typeof existing.logical_key === "string" ? existing.logical_key : recipe.key;
+        const anchorKey = reservationKey(recipe, view);
+        const anchor = snapshot.anchors[anchorKey];
+        if (
+          view.revision.fingerprints[own] === undefined &&
+          anchor !== undefined &&
+          view.revision.fingerprints[anchorKey] === anchor
+        )
+          deps.db
+            .prepare(
+              "UPDATE revision_work_reservations SET logical_key=?,desired_fingerprint=? WHERE revision_id=? AND work_key=? AND work_id=?",
+            )
+            .run(anchorKey, anchor, view.revision.id, recipe.key, String(existing.id));
         if (existing.state !== "running") {
           deps.db
             .prepare(

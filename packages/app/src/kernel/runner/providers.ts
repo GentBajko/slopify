@@ -139,7 +139,7 @@ export function stageProviders(
   };
 
   const queued = <T>(provider: string, work: () => Promise<T>): Promise<T> =>
-    deps.queue ? deps.queue.run(provider, context.signal, work) : work();
+    deps.queue ? deps.queue.run(provider, context.signal, work, context.stage.projectId) : work();
   const waiter = { projectId: context.stage.projectId, stage: context.stage.kind };
   // A CLI whose plan allowance is used up is waited for here, outside the queue, so the wait
   // holds no provider slot; the call is then made afresh with a full set of attempts.

@@ -18,6 +18,10 @@ export interface ReservationAnchor {
 export function reservationKey(recipe: ResolvedWorkRecipe, view: RevisionView): string {
   const key = recipe.input.kind === "tts" ? `${recipe.input.logicalKey}:1` : recipe.key;
   if (view.revision.fingerprints[key] !== undefined) return key;
+  // A picture check planned once its scene was written has no entry of its own in a version
+  // saved while the picture still waited on its scene: it is held to the picture it checks.
+  const checked = /^review:(image:.+)$/.exec(recipe.key)?.[1];
+  if (checked !== undefined && view.revision.fingerprints[checked] !== undefined) return checked;
   const future =
     recipe.input.kind === "tts"
       ? `audio:${recipe.input.segment}:future`

@@ -13,7 +13,7 @@ import {
   type RecipeContext,
   type ResolvedWorkRecipe,
   recipe,
-  resourceIdentity,
+  settledRecipe,
 } from "./recipe-model.js";
 import { promptOf } from "./recipe-text.js";
 
@@ -47,7 +47,6 @@ export function withReviews(
       : all.filter((item, index) => all.findIndex((one) => one.stage === item.stage) === index);
   const byAgent = reviewedByAgent(settings);
   const reviews = items.map((item) => {
-    const inputs = item.inputs.map((input) => [input.key, resourceIdentity(context, input)]);
     // Blank means the stage's built-in prompt; the step fills it in, so a new built-in
     // wording ships as a new operation version rather than a silent change here.
     const filled = settings.stages[item.stage]?.prompt?.trim()
@@ -57,8 +56,31 @@ export function withReviews(
     const dependsOn = [
       ...new Set([...item.inputs.map((input) => input.key), ...(filled?.dependsOn ?? [])]),
     ];
-    // An external agent answers through MCP: no provider, no charge, nothing to be ready.
-    if (byAgent)
+    // The item's files by identity, the same whatever order a version lists them in
+    // (`settledRecipe`): a picture drawn again doesn't send the article back to its reviewer.
+    return settledRecipe(context, item.inputs, (identities) => {
+      const inputs = item.inputs.map((input, index) => [input.key, identities[index] ?? null]);
+      // An external agent answers through MCP: no provider, no charge, nothing to be ready.
+      if (byAgent)
+        return recipe(
+          context,
+          reviewKey(item.itemKey),
+          stageOf(item.stage),
+          {
+            kind: "local",
+            version: 1,
+            operation: "review-agent-v1",
+            values: [
+              item.stage,
+              item.itemKey,
+              inputs,
+              prompt,
+              reviewModeOf(settings, item.stage),
+              reviewRetriesOf(settings),
+            ],
+          },
+          dependsOn,
+        );
       return recipe(
         context,
         reviewKey(item.itemKey),
@@ -66,42 +88,24 @@ export function withReviews(
         {
           kind: "local",
           version: 1,
-          operation: "review-agent-v1",
+          operation: "review-v1",
           values: [
             item.stage,
             item.itemKey,
             inputs,
+            settings.provider,
+            settings.model,
+            settings.thinking ?? null,
             prompt,
             reviewModeOf(settings, item.stage),
             reviewRetriesOf(settings),
           ],
         },
         dependsOn,
+        // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
+        { kind: "provider" },
       );
-    return recipe(
-      context,
-      reviewKey(item.itemKey),
-      stageOf(item.stage),
-      {
-        kind: "local",
-        version: 1,
-        operation: "review-v1",
-        values: [
-          item.stage,
-          item.itemKey,
-          inputs,
-          settings.provider,
-          settings.model,
-          settings.thinking ?? null,
-          prompt,
-          reviewModeOf(settings, item.stage),
-          reviewRetriesOf(settings),
-        ],
-      },
-      dependsOn,
-      // A paid LLM call: readiness, the charge warning and the estimate treat it like one.
-      { kind: "provider" },
-    );
+    });
   });
   const gated = recipes.map((row) => {
     const waits = items.flatMap((item, index) => {

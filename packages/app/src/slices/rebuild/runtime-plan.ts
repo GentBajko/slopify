@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
@@ -5,13 +6,26 @@ import type { Catalogue } from "../../catalog/schema.js";
 import { catalogueSchema } from "../../catalog/schema.js";
 import type { ThinkingMode } from "../../kernel/ports/llm.js";
 import type { LlmCall } from "../../kernel/runner/providers.js";
-import { fingerprint } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
-import type { ManifestPiece, RevisionDeps, RevisionView } from "../revisions/model.js";
-import { getRevisionView, readyOutput, withEarlierJoins } from "../revisions/view.js";
+import {
+  narrationJoinPiecesOfProject,
+  narrationJoinsOfProject,
+} from "../revisions/manifest-repo.js";
+import type {
+  ManifestPiece,
+  RevisionDeps,
+  RevisionOutputRecord,
+  RevisionPieceRecord,
+  RevisionView,
+} from "../revisions/model.js";
+import { getRevisionView, readyOutput } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
-import { referencedAssetsAvailable, retainedNarrationPieces } from "./narration-history.js";
-import { applyProvidedReviews } from "./provided-review.js";
+import {
+  forgetNarrationHistory,
+  referencedAssetsAvailable,
+  retainedNarrationHistory,
+} from "./narration-history.js";
+import { applyReviews, type ProvidedReview, providedReviews } from "./provided-review.js";
 import type { RecipeContext, ResolvedRevisionInputs } from "./recipe-model.js";
 import { textRecipes } from "./recipe-text.js";
 import { planRevisionWork, type RevisionWorkPlan } from "./recipe-work.js";
@@ -87,22 +101,21 @@ export function workLlm(
 // few dozen times over a run; at 240 it happened tens of thousands of times and the server
 // spent its whole time planning instead of answering.
 //
-// The plan is kept and handed back while nothing in the database has changed, which SQLite
-// counts for us. That is a blunt test on purpose: a write anywhere - another project, another
-// revision - throws the plan away and it is derived again. It can never hand back a plan from
-// after a write it has not seen, which is the only direction that would matter, because a
-// stale plan would start the wrong work.
+// The plan is kept and handed back while everything it is derived from is unchanged. It used
+// to be thrown away on any write to the database at all, which during a run is every finished
+// step of every project, and every write a step makes on its way (its attempt, its cost, its
+// telemetry): a dozen runs at once derived the plan of a 2-hour video several times a second
+// and the server stopped answering. Now the key is what the plan reads, each part read afresh
+// on every call (`planInputs`): the version, its outputs and pieces and whether each file is on
+// disk, the article and notes it reads off disk, the project's narration history and narration
+// joins, the uploads it refers to, its saved provided-content reviews and the catalogue. What
+// those were read from changes, the key changes. A stale plan would start the wrong work, so a
+// test (`runtime-plan-inputs.test.ts`) lists every table a derivation reads: one read the key
+// doesn't cover fails it.
 // Per database, never shared between them: two of them (the app and a mirror, or two tests)
 // can hold the same project under the same id, and one's plan is not the other's.
-const kept = new WeakMap<
-  DatabaseSync,
-  Map<string, { readonly changes: number; readonly plan: RevisionWorkPlan }>
->();
-const changeCount = z.object({ changes: z.number() });
-
-function writesSoFar(deps: RevisionDeps): number {
-  return changeCount.parse(deps.db.prepare("SELECT total_changes() AS changes").get()).changes;
-}
+const kept = new WeakMap<DatabaseSync, Map<string, RevisionWorkPlan>>();
+const keptPlans = 48;
 
 // Two catalogues that differ give different plans, so the catalogue belongs in the key. Its
 // date and shape identify it without hashing the whole of it on every call.
@@ -116,12 +129,18 @@ function catalogueMark(catalogue: Catalogue): string {
   ].join("/");
 }
 
-// What the plan was derived from, beyond the database: whether each output and piece is
-// selected and whether its file is still on disk. A file deleted by hand is no write at all,
-// so `total_changes()` would never notice it, and the plan would go on reusing work whose
-// output is gone. Walking a few hundred rows is nothing beside deriving the plan again.
+const hash = (text: string): string => createHash("sha256").update(text).digest("base64url");
+
+// What the plan reads of the version: its settings and contents, whether each output and
+// piece is selected and whether its file is still on disk. A file deleted by hand is no write at
+// all, and the plan must stop reusing work whose output is gone. A saved output or piece never
+// changes under its record id (only which are selected does), so the id stands for its record.
 function viewMark(view: RevisionView): string {
-  const rows: string[] = [String(view.articleMarkdown?.length ?? -1)];
+  const rows: string[] = [
+    JSON.stringify(view.revision),
+    String(view.current),
+    view.articleMarkdown === null ? "-" : `+${view.articleMarkdown}`,
+  ];
   for (const row of view.outputs)
     rows.push(
       `o${row.recordId}:${row.selected ? 1 : 0}${row.available ? 1 : 0}:${row.fingerprint}`,
@@ -130,7 +149,75 @@ function viewMark(view: RevisionView): string {
     rows.push(
       `p${row.recordId}:${row.selected ? 1 : 0}${row.available ? 1 : 0}:${row.fingerprint}`,
     );
-  return fingerprint(rows.join("\n"));
+  return hash(rows.join("\n"));
+}
+
+// Everything a derivation reads beyond the view, read once per call: for the key, and then,
+// when the plan isn't kept, for the derivation itself.
+interface PlanInputs {
+  readonly articleMarkdown: string | null;
+  readonly researchNotes: string | null;
+  readonly history: ReturnType<typeof retainedNarrationHistory>;
+  readonly referenced: readonly string[];
+  readonly earlierJoins: readonly RevisionOutputRecord[];
+  readonly earlierJoinPieces: readonly RevisionPieceRecord[];
+  readonly reviews: readonly ProvidedReview[];
+}
+
+function planInputs(deps: RevisionDeps, view: RevisionView): PlanInputs {
+  const textOutput = (role: "article_md" | "notes"): string | null => {
+    const row = readyOutput(view, { role });
+    return row === undefined
+      ? null
+      : readFileSync(outputPath(deps.paths, view.revision.projectId, row.output.path), "utf8");
+  };
+  const { projectId } = view.revision;
+  return {
+    articleMarkdown:
+      view.revision.content.articleEdited === true ||
+      view.revision.config.sources.article !== "generate"
+        ? view.articleMarkdown
+        : textOutput("article_md"),
+    researchNotes: textOutput("notes"),
+    history: retainedNarrationHistory(deps, projectId),
+    referenced: referencedAssetsAvailable(
+      deps,
+      projectId,
+      Object.values(view.revision.content.narrationOverrides).flatMap((value) =>
+        value.kind === "asset" ? [value.assetId] : [],
+      ),
+    ),
+    earlierJoins: narrationJoinsOfProject(deps.db, projectId),
+    earlierJoinPieces: narrationJoinPiecesOfProject(deps.db, projectId),
+    reviews: providedReviews(deps.db, view.revision.id),
+  };
+}
+
+function inputsMark(inputs: PlanInputs): string {
+  const record = (row: {
+    readonly recordId: string;
+    readonly selected: boolean;
+    readonly fingerprint: string;
+    readonly assetId: string | null;
+  }) => `${row.recordId}:${row.selected ? 1 : 0}:${row.fingerprint}:${row.assetId}`;
+  return hash(
+    [
+      inputs.articleMarkdown === null ? "-" : `+${inputs.articleMarkdown}`,
+      inputs.researchNotes === null ? "-" : `+${inputs.researchNotes}`,
+      inputs.history.mark,
+      inputs.referenced.join(","),
+      inputs.earlierJoins.map((row) => `${record(row)}:${row.state}`).join(","),
+      inputs.earlierJoinPieces.map(record).join(","),
+      JSON.stringify(inputs.reviews),
+    ].join("\n\u0000"),
+  );
+}
+
+// Forgets the plans and planning inputs kept for this database, so the next plan is derived
+// from fresh reads (tests compare the two).
+export function forgetPlanInputs(db: DatabaseSync): void {
+  kept.delete(db);
+  forgetNarrationHistory(db);
 }
 
 export function executionPlan(
@@ -138,40 +225,36 @@ export function executionPlan(
   view: RevisionView,
   catalogue: Catalogue,
 ): RevisionWorkPlan {
-  const key = `${view.revision.projectId}/${view.revision.id}/${catalogueMark(catalogue)}/${viewMark(view)}`;
-  const changes = writesSoFar(deps);
-  const forDb = kept.get(deps.db) ?? new Map();
+  const inputs = planInputs(deps, view);
+  const key = `${view.revision.projectId}/${view.revision.id}/${catalogueMark(catalogue)}/${viewMark(view)}/${inputsMark(inputs)}`;
+  const forDb = kept.get(deps.db) ?? new Map<string, RevisionWorkPlan>();
   kept.set(deps.db, forDb);
   const held = forDb.get(key);
-  if (held !== undefined && held.changes === changes) return held.plan;
-  const plan = derivePlan(deps, view, catalogue);
-  // A cache, not a store: a handful of revisions is all a run needs at once.
-  if (forDb.size > 8) forDb.clear();
-  forDb.set(key, { changes, plan });
+  if (held !== undefined) {
+    forDb.delete(key);
+    forDb.set(key, held);
+    return held;
+  }
+  const plan = derivePlan(view, catalogue, inputs);
+  // A cache, not a store, and the least recently used goes first: a dozen runs at once, each
+  // with the versions its held work came from (a redo plans those too). Clearing it all past
+  // nine threw every project's plan away before that project asked again.
+  forDb.set(key, plan);
+  if (forDb.size > keptPlans) forDb.delete(forDb.keys().next().value as string);
   return plan;
 }
 
 function derivePlan(
-  deps: RevisionDeps,
   view: RevisionView,
   catalogue: Catalogue,
+  inputs: PlanInputs,
 ): RevisionWorkPlan {
-  const textOutput = (role: "article_md" | "notes"): string | null => {
-    const row = readyOutput(view, { role });
-    return row === undefined
-      ? null
-      : readFileSync(outputPath(deps.paths, view.revision.projectId, row.output.path), "utf8");
-  };
   const payloads = view.pieces.filter(
     (piece) => piece.selected && piece.piece.state === "done" && piece.piece.payload !== null,
   );
   const resolved = {
-    articleMarkdown:
-      view.revision.content.articleEdited === true ||
-      view.revision.config.sources.article !== "generate"
-        ? view.articleMarkdown
-        : textOutput("article_md"),
-    researchNotes: textOutput("notes"),
+    articleMarkdown: inputs.articleMarkdown,
+    researchNotes: inputs.researchNotes,
   };
   const research = matchingResearch(
     {
@@ -183,29 +266,23 @@ function derivePlan(
     },
     payloads,
   );
-  const history = retainedNarrationPieces(deps, view.revision.projectId);
+  const history = inputs.history.pieces;
   const available = new Set([
     ...history
       .filter((row) => row.available && row.assetId !== null)
       .flatMap((row) => (row.assetId === null ? [] : [row.assetId])),
-    ...referencedAssetsAvailable(
-      deps,
-      view.revision.projectId,
-      Object.values(view.revision.content.narrationOverrides).flatMap((value) =>
-        value.kind === "asset" ? [value.assetId] : [],
-      ),
-    ),
+    ...inputs.referenced,
     ...view.outputs.filter((row) => row.available).map((row) => row.assetId),
     ...view.pieces
       .filter((row) => row.available && row.assetId !== null)
       .flatMap((row) => (row.assetId === null ? [] : [row.assetId])),
   ]);
-  return applyProvidedReviews(
-    deps.db,
-    view.revision.id,
+  return applyReviews(
+    inputs.reviews,
     planRevisionWork(
       view.revision,
-      withEarlierJoins(deps, view),
+      // The view with the narration joins of every version of the project (`withEarlierJoins`).
+      { ...view, earlierJoins: inputs.earlierJoins, earlierJoinPieces: inputs.earlierJoinPieces },
       catalogue,
       available,
       {

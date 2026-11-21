@@ -6,6 +6,7 @@ import type { FfmpegRun } from "../loudness/loudnorm.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { softenBreaths } from "./breaths.js";
 import { deEsser } from "./breaths-model.js";
+import { mapPieces } from "./piece-jobs.js";
 
 // Soften breaths and Soften S sounds in the join (`breaths-model.ts`): the breaths first, then
 // the de-esser, on the pieces as they will be joined, before the pauses are made. Each step is
@@ -48,28 +49,26 @@ export async function deEssPieces(
   directory: string,
 ): Promise<readonly string[]> {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const written: string[] = [];
-  for (const [index, file] of files.entries()) {
-    run.signal.throwIfAborted();
+  // Several pieces at once, in order (`piece-jobs.ts`).
+  return mapPieces(run, files, async (file, index, own) => {
     const output = join(directory, `deess-${String(index + 1).padStart(4, "0")}.wav`);
     try {
       await runFfmpeg({
-        bin: run.bin,
+        bin: own.bin,
         args: deEssArgs(file, output),
-        signal: run.signal,
-        log: run.log,
+        signal: own.signal,
+        log: own.log,
         onProgress: (): void => {},
       });
     } catch (error) {
-      if (run.signal.aborted) throw error;
+      if (own.signal.aborted) throw error;
       throw new Error(
         `Soften S sounds could not process narration piece ${String(index + 1)} (${errorText(error)}), so the narration can't be joined together. Use Try again; if it fails again, turn off Soften S sounds in ${editSettings.sound} and use Save changes, then use Download diagnostics in Settings and report it.`,
         { cause: error },
       );
     }
-    written.push(output);
-  }
-  return written;
+    return output;
+  });
 }
 
 export function deEssFilter(): string {

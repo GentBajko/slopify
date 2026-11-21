@@ -7,6 +7,7 @@ import { pieceLufs, pieceTruePeak } from "../loudness/model.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 import { sentences } from "./chunk.js";
 import type { PauseSettings } from "./pauses-model.js";
+import { mapPieces } from "./piece-jobs.js";
 
 // Pauses between sentences, made in the join (`pauses-model.ts` says why there). For each
 // narration piece:
@@ -318,19 +319,16 @@ export async function planPieces(
   pieces: readonly PausedPiece[],
   settings: PauseSettings,
 ): Promise<readonly { readonly pauses: PiecePauses; readonly padEnd: number }[]> {
-  const measured: PiecePauses[] = [];
-  for (const piece of pieces) {
-    run.signal.throwIfAborted();
-    const { durationSeconds, silences } = await measurePiece(run, piece.file);
-    measured.push(
-      planPauses({
-        durationSeconds,
-        silences,
-        boundaries: textBoundaries(piece.text),
-        settings,
-      }),
-    );
-  }
+  // Measured several pieces at once, in order (`piece-jobs.ts`).
+  const measured = await mapPieces(run, pieces, async (piece, _index, own) => {
+    const { durationSeconds, silences } = await measurePiece(own, piece.file);
+    return planPauses({
+      durationSeconds,
+      silences,
+      boundaries: textBoundaries(piece.text),
+      settings,
+    });
+  });
   return measured.map((pauses, at) => {
     const piece = pieces[at] as PausedPiece;
     const following = measured[at + 1];
@@ -351,25 +349,26 @@ export async function applyPauses(
   directory: string,
 ): Promise<{ readonly files: readonly string[]; readonly added: number }> {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const written: string[] = [];
-  let added = 0;
-  for (const [index, file] of files.entries()) {
-    run.signal.throwIfAborted();
+  // Several pieces at once, in order (`piece-jobs.ts`).
+  const written = await mapPieces(run, files, async (file, index, own) => {
     const plan = plans[index];
     const output = join(directory, `paced-${String(index + 1).padStart(4, "0")}.wav`);
     await runFfmpeg({
-      bin: run.bin,
+      bin: own.bin,
       args: insertArgs(file, output, plan?.pauses.inserts ?? [], plan?.padEnd ?? 0, {
         sampleRate: 44100,
         channels: 1,
       }),
-      signal: run.signal,
-      log: run.log,
+      signal: own.signal,
+      log: own.log,
       onProgress: (): void => {},
     });
-    added += (plan?.pauses.inserts.length ?? 0) + ((plan?.padEnd ?? 0) > 0 ? 1 : 0);
-    written.push(output);
-  }
+    return output;
+  });
+  const added = files.reduce((sum, _file, index) => {
+    const plan = plans[index];
+    return sum + (plan?.pauses.inserts.length ?? 0) + ((plan?.padEnd ?? 0) > 0 ? 1 : 0);
+  }, 0);
   return { files: written, added };
 }
 

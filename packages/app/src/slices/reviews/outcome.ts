@@ -2,15 +2,18 @@ import type { ReviewMode, ReviewOutcome, ReviewRecord } from "./model.js";
 
 // Which try at the item this review looks at. A redo Slopify started itself carries the
 // count on; anything else (a first review, an item the person changed or had made again)
-// starts at one. The same output reviewed again keeps its number.
+// starts at one. The same output reviewed again keeps its number, and so does the same file
+// under another fingerprint (`sameFile`, from `reviewedSameFile`): an item flagged after its
+// last try stays flagged rather than being sent back from the first try again.
 export function nextAttempt(
   previous:
     | Pick<ReviewRecord, "attempt" | "outcome" | "itemFingerprint" | "action" | "redoState">
     | undefined,
   itemFingerprint: string,
+  sameFile = false,
 ): number {
   if (previous === undefined) return 1;
-  if (previous.itemFingerprint === itemFingerprint) return previous.attempt;
+  if (previous.itemFingerprint === itemFingerprint || sameFile) return previous.attempt;
   if (previous.outcome === "redo" && previous.action === null && previous.redoState !== "failed")
     return previous.attempt + 1;
   return 1;

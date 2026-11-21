@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { RunConfig } from "../admission/model.js";
 import type { ManifestOutput, ManifestPiece, RevisionManifest } from "../revisions/model.js";
+import { audioRecipes } from "./recipe-audio.js";
 import { buildRecipes } from "./recipe-build.js";
+import { exportRecipes } from "./recipe-exports.js";
 import { catalogue, config, content } from "./recipe-fixture.js";
-import type { ResolvedWorkRecipe } from "./recipe-model.js";
+import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
+import { unsoftenedTimelines } from "./recipe-softening.js";
+import { textRecipes } from "./recipe-text.js";
 
 // Soften breaths and Soften S sounds change the narration's sound and never move a word, so a
 // project that turns them on keeps the word timing it has, and everything written from it: the
@@ -167,5 +171,30 @@ describe("turning on Soften breaths and Soften S sounds", () => {
     expect(fingerprintOf(after, "subtitles:timing")).not.toBe(
       fingerprintOf(before.recipes, "subtitles:timing"),
     );
+  });
+});
+
+// The plan is built again each time a step finishes, on the server's one thread. Each way of
+// having fewer softenings on plans the whole narration again, so with both on a new video's
+// plan did the narration four times over, after every picture. They only find a finished
+// timing to keep: a project with none yet has nothing to find.
+describe("a project with no finished word timing", () => {
+  it("never plans the narration without its softenings", () => {
+    const context: RecipeContext = {
+      config: softened,
+      content,
+      manifest: { outputs: [], pieces: [] },
+      resolved: { articleMarkdown: content.articleMarkdown ?? null, researchNotes: null },
+      catalogue,
+    };
+    const text = textRecipes(context);
+    const audio = audioRecipes(context, text);
+    let asked = 0;
+    const recipes = exportRecipes(context, audio, () => {
+      asked += 1;
+      return unsoftenedTimelines(context, text);
+    });
+    expect(asked).toBe(0);
+    expect(recipes.some((one) => one.key === "subtitles:timing")).toBe(true);
   });
 });

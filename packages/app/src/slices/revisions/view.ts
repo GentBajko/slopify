@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
-import { outputPath } from "../storage/layout.js";
+import { outputPath, outputPaths } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
 import { narrationJoinPiecesOfProject, narrationJoinsOfProject } from "./manifest-repo.js";
 import type {
@@ -27,14 +27,13 @@ export function getRevisionView(
     .all(projectId))
     if (typeof row.id === "string" && typeof row.path === "string") paths.set(row.id, row.path);
   const onDisk = new Map<string, boolean>();
+  const pathOf = outputPaths(deps.paths, projectId);
   const available = (assetId: string): boolean => {
     const known = onDisk.get(assetId);
     if (known !== undefined) return known;
     const path = paths.get(assetId);
     if (path === undefined) throw new Error(`Revision asset ${assetId} is not registered.`);
-    const found =
-      statSync(outputPath(deps.paths, projectId, path), { throwIfNoEntry: false })?.isFile() ===
-      true;
+    const found = statSync(pathOf(path), { throwIfNoEntry: false })?.isFile() === true;
     onDisk.set(assetId, found);
     return found;
   };

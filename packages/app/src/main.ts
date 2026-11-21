@@ -1317,7 +1317,7 @@ export function wireRunner({
     }),
     queue: createProviderQueue((provider) =>
       isLocalCliProvider(provider)
-        ? localCliConcurrency(provider)
+        ? localCliConcurrency(provider, process.env)
         : (catalogue.read().providers[provider]?.maxConcurrent ?? 1),
     ),
   };

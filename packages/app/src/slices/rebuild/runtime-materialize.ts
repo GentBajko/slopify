@@ -64,6 +64,18 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
               row.origin_revision === origin.origin_revision && row.work_key === futureKey(recipe),
           );
         if (anchor === undefined || !desiredAnchor(deps, projectId, head, anchor)) continue;
+        // A picture's check is unfolded from its picture once: one already reserved (an
+        // agent's review waiting for its answer is held, so it isn't among the allowed rows
+        // read above) is the version's check, not a placeholder to replace.
+        if (
+          own === undefined &&
+          anchor.work_key !== recipe.key &&
+          recipe.key.startsWith("review:image:") &&
+          deps.db
+            .prepare("SELECT 1 FROM revision_work_reservations WHERE revision_id=? AND work_key=?")
+            .get(head, recipe.key) !== undefined
+        )
+          continue;
         if (
           own !== undefined &&
           workPieces(deps.db, own.work_id).some(
@@ -193,6 +205,9 @@ function futureKey(recipe: ResolvedWorkRecipe): string {
     return "narration:describe:future";
   if (recipe.key.startsWith("research:chapter:")) return "research:planner";
   if (recipe.key === "article:continuation") return "article:body";
+  // A picture's check unfolds with the picture once its scene is written.
+  const picture = /^review:(image:.+)$/.exec(recipe.key);
+  if (picture?.[1] !== undefined) return picture[1];
   // A short's images and render unfold from its image prompts, admitted with them: under the
   // pick on a first run, or on their own when one short is made again and the pick is kept.
   // The prompts unfold from the pick's answer.

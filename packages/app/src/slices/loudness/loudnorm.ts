@@ -33,6 +33,9 @@ export interface FfmpegRun {
   readonly signal: AbortSignal;
   // Settings → Production defaults → Render priority; absent is normal.
   readonly priority?: RenderPriority | undefined;
+  // How many narration pieces the join works on at once (`narration/piece-jobs.ts`); absent is
+  // what the machine's cores allow.
+  readonly jobs?: number | undefined;
 }
 
 // ceiling: below -70 LUFS (the filter's absolute gate) or under 0.4 s (one measuring block)

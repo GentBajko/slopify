@@ -32,6 +32,25 @@ export function outputPath(paths: Paths, projectId: string, relativePath: string
   );
 }
 
+// The same for many of one project's stored paths at once: whether it is a studio sample and
+// where its folder is are looked up once, not for every file (each is a database read and a
+// look on disk). For use within one synchronous pass; a later pass asks again.
+export function outputPaths(paths: Paths, projectId: string): (relativePath: string) => string {
+  let folder: { readonly sample: boolean; readonly dir: string } | undefined;
+  return (relativePath) => {
+    folder ??= {
+      sample: paths.samples?.has(projectId) === true,
+      dir: projectDir(paths, projectId),
+    };
+    return contained(
+      folder.dir,
+      folder.sample
+        ? relativePath
+        : (paths.places?.placeOf(projectId, relativePath) ?? relativePath),
+    );
+  };
+}
+
 // Scheduled backups (slices/backups) land in paths.backups unless the user picks another
 // folder. Installs from before 3.0 keep it inside the projects root, since that is the one
 // folder an older Docker install shares with the host; newer ones have it beside Projects.

@@ -10,7 +10,7 @@ import { getRevisionView } from "../revisions/view.js";
 import type { RebuildSelection } from "./model.js";
 import { type PreviewPlan, planPreview } from "./preview-plan.js";
 import { retainedPreviewPlan } from "./preview-retained.js";
-import { recipeProviderChoice } from "./recipe-provider-choice.js";
+import { type RecipeProviderChoice, recipeProviderChoice } from "./recipe-provider-choice.js";
 import type { RevisionWorkPlan } from "./recipe-work.js";
 import { acceptedJobMessage, activeConflict, conflictRefusal } from "./recovery-conflict.js";
 import {
@@ -35,7 +35,7 @@ import {
 } from "./recovery-selection.js";
 import { previewById, storePreview } from "./repo.js";
 import { admitCheckedPreview, type RebuildDeps, wakeRebuild } from "./service.js";
-import { checkReadiness } from "./service-readiness.js";
+import { checkReadiness, paidChoices } from "./service-readiness.js";
 
 function credentialsStamp(deps: RebuildDeps, plan: PreviewPlan, view: RevisionView): string {
   const providers = new Set(
@@ -51,6 +51,40 @@ function credentialsStamp(deps: RebuildDeps, plan: PreviewPlan, view: RevisionVi
     .all()
     .filter((row) => providers.has(String(row.provider)));
   return requestHash("recovery-credentials", view.revision.id, metadata);
+}
+// The same selection planned again on the same version, stored for admission, or undefined
+// when the new plan asks for a service or model the readiness check did not cover, or would
+// stop where the first plan's checks would have refused.
+function replanCovered(
+  deps: RebuildDeps,
+  first: PreviewPlan,
+  checked: RevisionView,
+): PreviewPlan | undefined {
+  // Read again: the outputs of the steps that finished meanwhile are what changed.
+  const view = getRevisionView(deps, checked.revision.projectId, checked.revision.id);
+  if (view === undefined) return undefined;
+  const again = planPreview(
+    deps,
+    view,
+    deps.catalogue.read(),
+    first.preview.selection,
+    deps.ids.next(),
+  );
+  if (!again.ok) return undefined;
+  const { preview, execution } = again.value;
+  if (
+    preview.providedReuseRequired.length > 0 ||
+    preview.work.some((row) => row.disposition === "blocked")
+  )
+    return undefined;
+  const choice = (row: RecipeProviderChoice) =>
+    JSON.stringify([row.family, row.provider, row.model, row.voice ?? null, row.thinking ?? null]);
+  const covered = new Set(paidChoices(first.execution, checked, deps).map(choice));
+  if (!paidChoices(execution, view, deps).every((row) => covered.has(choice(row))))
+    return undefined;
+  storePreview(deps, preview, execution);
+  const stored = previewById(deps.db, view.revision.projectId, preview.id);
+  return stored === undefined ? undefined : { preview: stored, execution };
 }
 type Prepared = {
   readonly plan: PreviewPlan;
@@ -318,14 +352,24 @@ export async function recoverProject(
           ? activeConflict(deps, projectId, prepared.rerunKeys, superseded)
           : undefined;
       if (conflict !== undefined) return finish(conflictRefusal(conflict));
-      const admitted = admitCheckedPreview(
-        deps,
-        prepared.plan.preview,
-        prepared.plan.execution,
-        ready.providers,
-        recoveryKey(input, "admit"),
-        requestHash("direct-recovery", input.baseRevisionId, input.action),
-      );
+      const admit = (plan: PreviewPlan) =>
+        admitCheckedPreview(
+          deps,
+          plan.preview,
+          plan.execution,
+          ready.providers,
+          recoveryKey(input, "admit"),
+          requestHash("direct-recovery", input.baseRevisionId, input.action),
+        );
+      let admitted = admit(prepared.plan);
+      // An automatic redo plans the run's unfinished steps the video waits on too, so one of
+      // them finishing while the services were checked leaves its plan stale. Its version is
+      // saved by then, and refusing would leave the new draw held until Try again: it is
+      // planned again here, under the same lock, when the services already checked cover it.
+      if (!admitted.ok && admitted.reason === "stale-preview" && superseded) {
+        const again = replanCovered(deps, prepared.plan, prepared.view);
+        if (again !== undefined) admitted = admit(again);
+      }
       if (!admitted.ok) return finish(admitted);
       admittedHere = true;
       return finish({

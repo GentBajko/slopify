@@ -142,6 +142,7 @@ describe("migrate", () => {
       "agent_actions_time",
       "assistant_asks_session",
       "assistant_messages_session",
+      "attempts_work",
       "cast_images_member",
       "cast_members_channel",
       "cast_members_order",
@@ -172,10 +173,13 @@ describe("migrate", () => {
       "review_checkpoint_work",
       "review_verdicts_item",
       "review_verdicts_redo",
+      "revision_outputs_project_work",
       "revision_outputs_publication",
       "revision_outputs_revision",
       "revision_outputs_selected",
       "revision_piece_dispatch",
+      "revision_pieces_project_key",
+      "revision_pieces_project_stage",
       "revision_pieces_publication",
       "revision_pieces_revision",
       "revision_pieces_selected",
@@ -271,6 +275,8 @@ describe("migrate", () => {
       { version: 76, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 77, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 78, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 79, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 80, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -280,7 +286,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 70 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 72 });
   });
 
   it("upgrades a database at 62 through every later migration, the template studio's included", () => {
@@ -292,7 +298,7 @@ describe("migrate", () => {
         .prepare("SELECT version FROM schema_migrations WHERE version > 62 ORDER BY version")
         .all()
         .map((row) => row.version),
-    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78]);
+    ).toEqual([63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80]);
   });
 
   // Applied by the set of versions a database has, never by its newest: one that took the
@@ -330,10 +336,10 @@ describe("migrate", () => {
   it("refuses a database newer than the app knows", () => {
     const db = openDb(":memory:");
     migrate(db, clock);
-    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(79, clock.now().toISOString());
+    db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(81, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 79 is newer than this app knows (78)",
+      "database schema 81 is newer than this app knows (80)",
     );
   });
 

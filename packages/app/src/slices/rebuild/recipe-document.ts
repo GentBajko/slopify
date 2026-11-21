@@ -5,7 +5,7 @@ import {
   type RecipeContext,
   type ResolvedWorkRecipe,
   recipe,
-  resourceIdentity,
+  settledRecipe,
 } from "./recipe-model.js";
 import type { TextRecipes } from "./recipe-text.js";
 
@@ -26,28 +26,35 @@ export function documentRecipes(
   const notes = text.recipes.find((value) => value.key === "research:notes");
   const cover = thumbnail.find((value) => value.key === "thumbnail:image");
   const theme = resolvedDocumentTheme(config.document);
+  const inputs = [
+    text.article,
+    ...[notes, cover].flatMap((value) => (value === undefined ? [] : [value])),
+  ];
+  // The article and notes are several files each; their identity doesn't follow the order a
+  // version lists them in (`settledRecipe`).
   return [
-    recipe(
-      context,
-      "document:pdf",
-      "document",
-      {
-        kind: "local",
-        version: 1,
-        operation: "render-document",
-        values: [
-          renderer,
-          subjectOf(config),
-          JSON.parse(JSON.stringify(theme)) as FingerprintValue,
-          resourceIdentity(context, text.article),
-          notes === undefined ? null : resourceIdentity(context, notes),
-          cover === undefined ? null : resourceIdentity(context, cover),
-        ],
-      },
-      [
-        text.article.key,
-        ...[notes, cover].flatMap((value) => (value === undefined ? [] : [value.key])),
-      ],
-    ),
+    settledRecipe(context, inputs, (identities) => {
+      const identity = (value: ResolvedWorkRecipe | undefined) =>
+        value === undefined ? null : (identities[inputs.indexOf(value)] ?? null);
+      return recipe(
+        context,
+        "document:pdf",
+        "document",
+        {
+          kind: "local",
+          version: 1,
+          operation: "render-document",
+          values: [
+            renderer,
+            subjectOf(config),
+            JSON.parse(JSON.stringify(theme)) as FingerprintValue,
+            identity(text.article),
+            identity(notes),
+            identity(cover),
+          ],
+        },
+        inputs.map((value) => value.key),
+      );
+    }),
   ];
 }

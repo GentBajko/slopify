@@ -3,6 +3,7 @@ import { z } from "zod";
 import { internalError } from "../../kernel/errors.js";
 import { type Actor, actors } from "../agents/model.js";
 import { type ReviewRecord, reviewAnswerers, reviewStages } from "./model.js";
+import { reviewedOutputKey } from "./view.js";
 
 const rowSchema = z.object({
   id: z.string(),
@@ -141,6 +142,36 @@ export function pendingRedos(db: DatabaseSync, projectId?: string): readonly Rev
           )
           .all(projectId)
   ).map(recordOf);
+}
+
+// Whether this verdict looked at the very file a version now holds under `itemFingerprint`. A
+// version that keeps a file can stamp it with another fingerprint (a deferred article settles
+// on its planned one), and the same file is no new try at the item (`nextAttempt`).
+export function reviewedSameFile(
+  db: DatabaseSync,
+  verdict: Pick<ReviewRecord, "projectId" | "revisionId" | "itemKey" | "itemFingerprint">,
+  revisionId: string,
+  itemFingerprint: string,
+): boolean {
+  const workKey = reviewedOutputKey(verdict.itemKey);
+  return (
+    db
+      .prepare(
+        `SELECT 1 FROM revision_outputs a JOIN revision_outputs b ON b.asset_id=a.asset_id
+         WHERE a.project_id=? AND a.revision_id=? AND a.work_key=? AND a.fingerprint=?
+           AND b.project_id=? AND b.revision_id=? AND b.work_key=? AND b.fingerprint=? LIMIT 1`,
+      )
+      .get(
+        verdict.projectId,
+        verdict.revisionId,
+        workKey,
+        verdict.itemFingerprint,
+        verdict.projectId,
+        revisionId,
+        workKey,
+        itemFingerprint,
+      ) !== undefined
+  );
 }
 
 export function setRedoState(

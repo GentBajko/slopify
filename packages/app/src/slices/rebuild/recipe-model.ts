@@ -1,9 +1,8 @@
-import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { Message, ThinkingConfig, ThinkingMode } from "../../kernel/ports/llm.js";
 import type { LlmDocument } from "../../kernel/ports/llm-documents.js";
-import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
+import { type FingerprintValue, fingerprint, fingerprintJson } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
 import { narrationRegenerationToken, narrationRequestFingerprint } from "../narration/plan.js";
 import type { PreparationSource } from "../narration/preparation.js";
@@ -230,13 +229,8 @@ export function recipe(
             ...input,
             wholeText: input.wholeRequest === true ? input.logicalText : null,
           })
-        : fingerprint(
-            JSON.parse(
-              JSON.stringify(input, (_key: string, value: unknown): unknown =>
-                typeof value === "number" ? z.number().finite().parse(value) : value,
-              ),
-            ) as FingerprintValue,
-          );
+        : // As JSON writes the input, every number finite (`kernel/runner/work.ts`).
+          fingerprintJson(input);
   const token =
     input.kind === "tts"
       ? narrationRegenerationToken(
@@ -279,9 +273,7 @@ export function selectedAsset(
   key: string,
   desired?: string,
 ): string | null {
-  const output = context.manifest.outputs.find(
-    (row) => row.workKey === key && row.state === "ready" && selectedReference(row),
-  );
+  const output = readyFiles(context, key)[0];
   if (output !== undefined) return output.assetId;
   const piece = context.manifest.pieces.find(
     (row) =>
@@ -297,6 +289,67 @@ export function resourceIdentity(
   value: ResolvedWorkRecipe,
 ): FingerprintValue {
   return [value.fingerprint, selectedAsset(context, value.key, value.fingerprint)];
+}
+
+// A step that writes several files (the article: its text, plain text, sources and glossary)
+// has one ready output per slot, and the manifest lists them in the order the version's rows
+// were saved in, which every save draws afresh with new row ids. The files sorted by slot, so
+// the one that stands for the step in `resourceIdentity` is the same on every version that
+// keeps them; a step with one file is unchanged.
+function readyFiles(context: RecipeContext, key: string): readonly ManifestOutput[] {
+  return context.manifest.outputs
+    .filter((row) => row.workKey === key && row.state === "ready" && selectedReference(row))
+    .toSorted((a, b) => (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
+}
+
+// Each identity `resourceIdentity` may have given this input before it sorted the files: the
+// fixed one first, then one per other file of the step. Only for `settledRecipe`.
+function resourceIdentities(
+  context: RecipeContext,
+  value: ResolvedWorkRecipe,
+): readonly FingerprintValue[] {
+  const fixed = resourceIdentity(context, value);
+  const others = [...new Set(readyFiles(context, value.key).map((row) => row.assetId))].filter(
+    (assetId) => assetId !== selectedAsset(context, value.key, value.fingerprint),
+  );
+  return [fixed, ...others.map((assetId) => [value.fingerprint, assetId])];
+}
+
+// ceiling: the variants one step is planned in; the article's four files are four.
+const variantLimit = 32;
+
+// One step planned with each identity its inputs may have had (`variant` gets one identity per
+// input, by place, the fixed choice first): the variant a finished piece or ready output of this
+// version was made with, so a step Slopify finished while another of a step's files happened to
+// be listed first is kept rather than made and paid for again; otherwise the fixed choice.
+export function settledRecipe(
+  context: RecipeContext,
+  inputs: readonly ResolvedWorkRecipe[],
+  variant: (identities: readonly FingerprintValue[]) => ResolvedWorkRecipe,
+): ResolvedWorkRecipe {
+  const choices = inputs.map((input) => resourceIdentities(context, input));
+  const fixed = variant(choices.map((one) => one[0] ?? null));
+  if (choices.every((one) => one.length <= 1)) return fixed;
+  const finished = (row: ResolvedWorkRecipe) =>
+    context.manifest.pieces.some(
+      (one) =>
+        one.key === row.key && one.piece.state === "done" && one.fingerprint === row.fingerprint,
+    ) ||
+    context.manifest.outputs.some(
+      (one) =>
+        one.workKey === row.key && one.state === "ready" && one.fingerprint === row.fingerprint,
+    );
+  if (finished(fixed)) return fixed;
+  let combos: FingerprintValue[][] = [[]];
+  for (const one of choices)
+    combos = combos
+      .flatMap((picked) => one.map((identity) => [...picked, identity]))
+      .slice(0, variantLimit);
+  for (const combo of combos.slice(1)) {
+    const row = variant(combo);
+    if (finished(row)) return row;
+  }
+  return fixed;
 }
 
 export function selectedReference(value: ManifestOutput | ManifestPiece): boolean {

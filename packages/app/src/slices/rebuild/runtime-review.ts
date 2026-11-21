@@ -14,7 +14,7 @@ import {
   reviewStages,
 } from "../reviews/model.js";
 import { nextAttempt, reviewOutcome } from "../reviews/outcome.js";
-import { latestVerdict, saveVerdict } from "../reviews/repo.js";
+import { latestVerdict, reviewedSameFile, saveVerdict } from "../reviews/repo.js";
 import { parseVerdict, type ReviewMaterial, reviewMessages } from "../reviews/verdict.js";
 import type { RevisionOutputView } from "../revisions/model.js";
 import { isReadyOutput } from "../revisions/view.js";
@@ -72,7 +72,12 @@ export async function executeReviewRecipe(
   const snapshot = exportSnapshot(deps, context, piece);
   const material = reviewMaterial(deps, context, snapshot, stage, itemKey, prompt);
   const previous = latestVerdict(deps.db, context.work.projectId, itemKey);
-  const attempt = nextAttempt(previous, material.itemFingerprint);
+  const attempt = nextAttempt(
+    previous,
+    material.itemFingerprint,
+    previous !== undefined &&
+      reviewedSameFile(deps.db, previous, context.work.revisionId, material.itemFingerprint),
+  );
   const level = thinking === null ? undefined : z.enum(thinkingModes).parse(thinking);
   const call = workLlm(
     deps.db,

@@ -45,20 +45,26 @@ export function reviewHold(
 // Starts the redos reviews asked for, once their review step has finished: the item is made
 // again through Re-run's path (a new regeneration token saved as a new project version, then
 // its dependents rebuilt), so the redone item, its new review and everything after it are
-// ordinary recipe work. One at a time per verdict; a redo that cannot start leaves the item
-// flagged with the reason and releases what was waiting on it.
+// ordinary recipe work. One at a time per project: two redos started together would each save
+// a version on the one before, and the first one's admission would find the project changed,
+// leaving its new draw held. A redo that cannot start leaves the item flagged with the reason
+// and releases what was waiting on it.
 export function createReviewRedos(): {
   readonly bind: (deps: RebuildDeps) => void;
   readonly kick: (projectId?: string) => void;
 } {
   let bound: RebuildDeps | undefined;
+  // The projects with a redo being started.
   const running = new Set<string>();
-  const kick = (projectId?: string): void => {
+  // `tried`: the verdicts this chain of redos already started. A redo that ended still
+  // waiting (its state never saved) is not started again by the chain, so two such redos
+  // can't start each other forever; the next review, run or restart starts a fresh chain.
+  const kick = (projectId?: string, tried: ReadonlySet<string> = new Set()): void => {
     const deps = bound;
     if (deps === undefined) return;
     for (const verdict of pendingRedos(deps.db, projectId)) {
-      if (running.has(verdict.id)) continue;
-      running.add(verdict.id);
+      if (tried.has(verdict.id) || running.has(verdict.projectId)) continue;
+      running.add(verdict.projectId);
       void startRedo(deps, verdict)
         .catch((error: unknown) => {
           deps.log.write("error", "review.redo", {
@@ -73,12 +79,14 @@ export function createReviewRedos(): {
           );
         })
         .finally(() => {
-          running.delete(verdict.id);
+          running.delete(verdict.projectId);
           try {
             deps.runner.tick(verdict.projectId);
           } catch {
             // The next tick of this project picks the released work up.
           }
+          // The project's next waiting redo, on the version this one saved.
+          kick(verdict.projectId, new Set([...tried, verdict.id]));
         });
     }
   };
@@ -86,7 +94,7 @@ export function createReviewRedos(): {
     bind: (deps) => {
       bound = deps;
     },
-    kick,
+    kick: (projectId) => kick(projectId),
   };
 }
 

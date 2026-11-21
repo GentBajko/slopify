@@ -8,7 +8,7 @@ import { openExternalReview } from "../reviews/external-repo.js";
 import { externalReviewByFingerprint } from "../reviews/external-rows.js";
 import { reviewStages } from "../reviews/model.js";
 import { nextAttempt, reviewOutcome } from "../reviews/outcome.js";
-import { latestVerdict, saveVerdict } from "../reviews/repo.js";
+import { latestVerdict, reviewedSameFile, saveVerdict } from "../reviews/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { exportSnapshot } from "./runtime-export-inputs.js";
@@ -82,7 +82,13 @@ export async function executeAgentReviewRecipe(
   const autoPassed = known.state === "auto-passed";
   const verdict = autoPassed ? { passed: true, reasons: [] } : known.verdict;
   if (known.state === "waiting" || verdict === null) return "waiting";
-  const attempt = nextAttempt(latestVerdict(deps.db, projectId, itemKey), known.itemFingerprint);
+  const previous = latestVerdict(deps.db, projectId, itemKey);
+  const attempt = nextAttempt(
+    previous,
+    known.itemFingerprint,
+    previous !== undefined &&
+      reviewedSameFile(deps.db, previous, context.work.revisionId, known.itemFingerprint),
+  );
   const outcome = autoPassed
     ? "auto-passed"
     : reviewOutcome({ passed: verdict.passed, mode, attempt, retries });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { RunConfig } from "../admission/model.js";
+import type { ManifestPiece } from "../revisions/model.js";
 import { buildRecipes } from "./recipe-build.js";
-import { config, content, emptyView } from "./recipe-fixture.js";
+import { config, content, emptyView, readyView } from "./recipe-fixture.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
 import { planRevision } from "./recipes.js";
 
@@ -305,5 +306,106 @@ describe("the promise check's recipe", () => {
       reviews: { ...reviewer, stages: { promise: { mode: "redo" } } },
     };
     expect(recipesFor(provided)).toEqual(recipesFor(narrated));
+  });
+});
+
+// A written article is several files (the text, plain text, sources, glossary), one ready output
+// per slot, and each save gives the version's rows new ids, so the manifest can list them in any
+// order. A review's fingerprint follows the article, not the order its files come back in: a
+// picture redrawn after its check failed must not send the article, the promise and the
+// narration back to their reviewers (and the article on to four more paid rewrites).
+describe("a review's fingerprint and the article's files", () => {
+  const written: RunConfig = {
+    ...narrated,
+    sources: { ...narrated.sources, article: "generate" },
+    reviews: {
+      ...reviewer,
+      stages: {
+        article: { mode: "redo" },
+        promise: { mode: "redo" },
+        narration: { mode: "redo" },
+        images: { mode: "redo" },
+      },
+    },
+  };
+  const slots = ["article_md", "article_txt", "sources", "glossary"] as const;
+  const base = readyView(written);
+  const article = base.outputs.find((row) => row.workKey === "article:body");
+  if (article === undefined) throw new Error("no article output");
+  const files = slots.map((role) => ({
+    ...article,
+    recordId: `record-${role}`,
+    slot: `article:${role}`,
+    assetId: `asset-article-${role}`,
+    output: { ...article.output, id: `output-${role}`, role },
+  }));
+  const others = base.outputs.filter((row) => row.workKey !== "article:body");
+  const recipesWith = (
+    outputs: typeof base.outputs,
+    value = content,
+    pieces: readonly ManifestPiece[] = [],
+  ) =>
+    buildRecipes({
+      config: written,
+      content: value,
+      manifest: { outputs, pieces },
+      resolved: { articleMarkdown: "First paragraph.\n\nSecond paragraph.", researchNotes: null },
+    });
+  const fingerprintOf = (rows: ReturnType<typeof recipesWith>, key: string) =>
+    rows.find((row) => row.key === key)?.fingerprint;
+  const checked = ["review:article:body", "review:promise", "review:narration"] as const;
+
+  it("leaves the article, promise and narration reviews alone when a picture is redrawn", () => {
+    const before = recipesWith([...others, ...files]);
+    // The next version: one picture drawn again, the article's files listed in another order.
+    const after = recipesWith([...others, ...[...files].reverse()], {
+      ...content,
+      regenerationTokens: { "image:harbor": "redraw-1" },
+    });
+    for (const key of checked) {
+      expect(fingerprintOf(before, key)).toBeDefined();
+      expect(fingerprintOf(after, key)).toBe(fingerprintOf(before, key));
+    }
+    // The redrawn picture's own check does run again.
+    expect(fingerprintOf(after, "review:image:harbor")).not.toBe(
+      fingerprintOf(before, "review:image:harbor"),
+    );
+    for (const order of [
+      files.slice(1).concat(files.slice(0, 1)),
+      files.slice(2).concat(files.slice(0, 2)),
+    ])
+      for (const key of checked)
+        expect(fingerprintOf(recipesWith([...others, ...order]), key)).toBe(
+          fingerprintOf(before, key),
+        );
+  });
+
+  it("keeps a finished review made when another of the article's files came first", () => {
+    // A review an earlier Slopify finished while the sources file happened to be listed first.
+    const earlier = recipesWith([
+      ...others,
+      ...files.filter((row) => row.slot === "article:sources"),
+    ]);
+    const pieces = checked.map((key) => ({
+      key,
+      stageKind: "article" as const,
+      piece: {
+        id: `piece-${key}`,
+        stageId: "article-stage",
+        kind: "segment" as const,
+        idx: 1,
+        state: "done" as const,
+        payload: null,
+      },
+      assetId: null,
+      fingerprint: fingerprintOf(earlier, key) ?? "",
+    }));
+    const kept = recipesWith([...others, ...files], content, pieces);
+    for (const key of checked) expect(fingerprintOf(kept, key)).toBe(fingerprintOf(earlier, key));
+    // A review that was never finished takes the one fixed choice.
+    const fresh = recipesWith([...others, ...files]);
+    expect(fingerprintOf(fresh, "review:article:body")).not.toBe(
+      fingerprintOf(earlier, "review:article:body"),
+    );
   });
 });

@@ -11,7 +11,7 @@ import { createHub } from "../src/edge/events/hub.js";
 import { currentProjectEvent } from "../src/edge/events/visibility.js";
 import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { systemClock } from "../src/kernel/clock.js";
-import type { LlmCompletion } from "../src/kernel/ports/llm.js";
+import type { LlmCompletion, LlmPort } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import type { TtsPort } from "../src/kernel/ports/tts.js";
 import { wireRunner } from "../src/main.js";
@@ -19,6 +19,7 @@ import type { RunConfig } from "../src/slices/admission/model.js";
 import { createReviewRedos } from "../src/slices/rebuild/review-redo.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
 import { createRebuildDeps, paidServiceFixture } from "../src/slices/rebuild/service.fake.js";
+import type { RebuildDeps } from "../src/slices/rebuild/service.js";
 import type { ReviewSettings } from "../src/slices/reviews/model.js";
 import { listVerdicts, pendingRedos } from "../src/slices/reviews/repo.js";
 import type { RevisionContent, RevisionView } from "../src/slices/revisions/model.js";
@@ -115,6 +116,13 @@ export interface Options {
   readonly reviews: Omit<ReviewSettings, "provider" | "model">;
   // Leave the redos unbound for the run, so a verdict that sends its item back stays pending.
   readonly unbound?: boolean;
+  // While `blocks` is set, each review call waits until it is aborted (a quit mid-way);
+  // `waiting` counts the calls that did.
+  readonly holdReviews?: { blocks: boolean; waiting: number };
+  // A review call whose request text this answers with a promise waits for it before replying.
+  readonly gateReviews?: (text: string) => Promise<void> | undefined;
+  // Called once the version is saved, just before the run starts.
+  readonly beforeStart?: (deps: RebuildDeps, projectId: string) => void;
 }
 
 export async function reviewedRun(options: Options) {
@@ -141,10 +149,32 @@ export async function reviewedRun(options: Options) {
     },
   });
   const images = options.image ?? fakeImage({ bytes: still("320x180") });
+  const hold = options.holdReviews;
+  const held: LlmPort = {
+    ...llm,
+    complete: (request) => {
+      const gate = isReview(request)
+        ? options.gateReviews?.(request.messages.at(-1)?.content ?? "")
+        : undefined;
+      if (gate !== undefined)
+        return (async function* () {
+          await gate;
+          yield* llm.complete(request);
+        })();
+      if (hold?.blocks !== true || !isReview(request)) return llm.complete(request);
+      hold.waiting += 1;
+      return (async function* () {
+        await new Promise((_resolve, reject) =>
+          request.signal.addEventListener("abort", () => reject(new Error("aborted"))),
+        );
+        yield* llm.complete(request);
+      })();
+    },
+  };
   const registry: Registry = {
     image: () => images,
     tts: () => options.tts ?? fakeTts({ bytesFor: () => [options.speech ?? tone()] }),
-    llm: () => llm,
+    llm: () => (hold === undefined && options.gateReviews === undefined ? llm : held),
     list: async () => [],
   };
   const service = createRebuildDeps({ ...h.deps, clock: systemClock }, h.catalogue);
@@ -164,16 +194,19 @@ export async function reviewedRun(options: Options) {
     ],
   });
   const redos = createReviewRedos();
-  const runner = wireRunner({
-    ...service.deps,
-    ffmpeg,
-    hub: createHub({ ...h.deps, acceptEvent: (event) => currentProjectEvent(h.deps.db, event) }),
-    registry,
-    audioPreviews: createAudioPreviewStore(),
-    telemetry: { ...h.deps, appVersion: "test" },
-    flusher: { soon: () => undefined, stop: () => undefined },
-    onFinished: (work) => redos.kick(work.projectId),
-  });
+  // A new runner over the same database and doubles: what boot wires after a restart.
+  const wire = () =>
+    wireRunner({
+      ...service.deps,
+      ffmpeg,
+      hub: createHub({ ...h.deps, acceptEvent: (event) => currentProjectEvent(h.deps.db, event) }),
+      registry,
+      audioPreviews: createAudioPreviewStore(),
+      telemetry: { ...h.deps, appVersion: "test" },
+      flusher: { soon: () => undefined, stop: () => undefined },
+      onFinished: (work) => redos.kick(work.projectId),
+    });
+  const runner = wire();
   const deps = { ...service.deps, runner };
   if (options.unbound !== true) redos.bind(deps);
   const base = current(deps, h.projectId);
@@ -191,6 +224,7 @@ export async function reviewedRun(options: Options) {
       content: options.handEdit(saved),
     });
   }
+  options.beforeStart?.(deps, h.projectId);
   await start(deps, h.projectId, Object.keys(current(deps, h.projectId).revision.fingerprints));
   // A redo starts after its review's step has finished, so the run settles in rounds.
   const settle = async () => {
@@ -209,7 +243,7 @@ export async function reviewedRun(options: Options) {
   };
   if (options.unsettled !== true) await settle();
   const verdicts = () => listVerdicts(deps.db, h.projectId).toReversed();
-  return { h, deps, runner, redos, llm, images, asked, verdicts, settle };
+  return { h, deps, runner, redos, llm, images, asked, verdicts, settle, wire, service };
 }
 
 // The article: written by the text model from its prompt and the provided research.

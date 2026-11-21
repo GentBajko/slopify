@@ -41,6 +41,16 @@ describe("nextAttempt", () => {
     expect(nextAttempt({ ...redo, attempt: 2 }, "old")).toBe(2);
   });
 
+  // A version that keeps the article can stamp its file with another fingerprint (a deferred
+  // step settling on its planned one): the same file is no new try, so an item flagged after
+  // its last attempt stays flagged instead of starting four more paid redos.
+  it("keeps the number when the same file comes back under another fingerprint", () => {
+    const flagged = { ...redo, attempt: 5, outcome: "flagged" as const, redoState: null };
+    expect(nextAttempt(flagged, "restamped", true)).toBe(5);
+    expect(reviewOutcome({ passed: false, mode: "redo", attempt: 5, retries: 4 })).toBe("flagged");
+    expect(nextAttempt(flagged, "restamped")).toBe(1);
+  });
+
   it("starts again after a person acted, or when the redo never started", () => {
     expect(nextAttempt({ ...redo, action: "redone" }, "new")).toBe(1);
     expect(nextAttempt({ ...redo, action: "overruled" }, "new")).toBe(1);

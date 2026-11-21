@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { isAbsolute, join, resolve as resolvePath } from "node:path";
 import { editSettings } from "../../kernel/ports/settings-places.js";
 import { measurePiece, type Silence } from "../narration/pauses.js";
+import { mapPieces } from "../narration/piece-jobs.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { FfmpegRun } from "./loudnorm.js";
 import { sentenceLevel } from "./sentence-level-model.js";
@@ -310,43 +311,52 @@ export async function levelSentences(
   readonly sentences: number;
 }> {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const measured: {
-    spans: readonly { readonly start: number; readonly end: number }[];
-    readings: SentenceReading[];
-  }[] = [];
-  let offset = 0;
-  for (const file of files) {
-    run.signal.throwIfAborted();
-    const { durationSeconds, silences } = await measurePiece(run, file);
+  // Measured several pieces at once (`narration/piece-jobs.ts`); each sentence's time on the
+  // whole narration is added after, in order, as the gains are found across the joins.
+  const pieces = await mapPieces(run, files, async (file, _index, own) => {
+    const { durationSeconds, silences } = await measurePiece(own, file);
     const spans = speechSpans(durationSeconds, silences);
-    const { power, peaks } = await meterFile(run, file);
+    const { power, peaks } = await meterFile(own, file);
     const readings = spans.map((span) => {
       let loudest = 0;
       const a = Math.max(0, Math.floor(span.start * framesPerSecond));
       const b = Math.min(peaks.length, Math.ceil(span.end * framesPerSecond));
       for (let at = a; at < b; at++) loudest = Math.max(loudest, peaks[at] ?? 0);
       return {
-        at: offset + (span.start + span.end) / 2,
+        middle: (span.start + span.end) / 2,
         loudness: gatedLoudness(power, span.start, span.end),
         peakDb: 20 * Math.log10(Math.max(loudest, 1e-9)),
       };
     });
-    measured.push({ spans, readings });
-    offset += durationSeconds;
+    return { durationSeconds, spans, readings };
+  });
+  const measured: {
+    spans: readonly { readonly start: number; readonly end: number }[];
+    readings: SentenceReading[];
+  }[] = [];
+  let offset = 0;
+  for (const piece of pieces) {
+    measured.push({
+      spans: piece.spans,
+      readings: piece.readings.map((one) => ({
+        at: offset + one.middle,
+        loudness: one.loudness,
+        peakDb: one.peakDb,
+      })),
+    });
+    offset += piece.durationSeconds;
   }
   const gains = sentenceGains(measured.flatMap((one) => one.readings));
-  const written: string[] = [];
+  const owned: (readonly number[])[] = [];
   let next = 0;
-  for (const [index, file] of files.entries()) {
-    run.signal.throwIfAborted();
-    const { spans } = measured[index] as (typeof measured)[number];
-    const own = gains.slice(next, next + spans.length);
+  for (const { spans } of measured) {
+    owned.push(gains.slice(next, next + spans.length));
     next += spans.length;
-    const changes = gainChanges(spans, own);
-    if (changes.every((one) => Math.abs(one.gainDb) < changeDb)) {
-      written.push(file);
-      continue;
-    }
+  }
+  const written = await mapPieces(run, files, async (file, index, own) => {
+    const { spans } = measured[index] as (typeof measured)[number];
+    const changes = gainChanges(spans, owned[index] ?? []);
+    if (changes.every((one) => Math.abs(one.gainDb) < changeDb)) return file;
     const output = join(directory, `sentences-${String(index + 1).padStart(4, "0")}.wav`);
     const commands = volumeCommands(
       changes
@@ -358,7 +368,7 @@ export async function levelSentences(
     );
     try {
       await runFfmpeg({
-        bin: run.bin,
+        bin: own.bin,
         args: [
           "-hide_banner",
           "-nostdin",
@@ -376,15 +386,15 @@ export async function levelSentences(
           "wav",
           output,
         ],
-        signal: run.signal,
-        log: run.log,
+        signal: own.signal,
+        log: own.log,
         onProgress: (): void => {},
       });
     } finally {
       commands.dispose();
     }
-    written.push(output);
-  }
+    return output;
+  });
   return {
     files: written,
     raised: gains.filter((gain) => gain > 1).length,
