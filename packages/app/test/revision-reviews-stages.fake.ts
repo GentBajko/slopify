@@ -123,6 +123,9 @@ export interface Options {
   readonly gateReviews?: (text: string) => Promise<void> | undefined;
   // Called once the version is saved, just before the run starts.
   readonly beforeStart?: (deps: RebuildDeps, projectId: string) => void;
+  // Called once the run's work is admitted, before the runner takes any of it up (a
+  // checkpoint added to the started run, say).
+  readonly afterAdmit?: (deps: RebuildDeps, projectId: string) => void;
 }
 
 export async function reviewedRun(options: Options) {
@@ -225,7 +228,13 @@ export async function reviewedRun(options: Options) {
     });
   }
   options.beforeStart?.(deps, h.projectId);
-  await start(deps, h.projectId, Object.keys(current(deps, h.projectId).revision.fingerprints));
+  const keys = Object.keys(current(deps, h.projectId).revision.fingerprints);
+  if (options.afterAdmit === undefined) await start(deps, h.projectId, keys);
+  else {
+    await start({ ...deps, runner: { ...runner, tick: () => undefined } }, h.projectId, keys);
+    options.afterAdmit(deps, h.projectId);
+    runner.tick(h.projectId);
+  }
   // A redo starts after its review's step has finished, so the run settles in rounds.
   const settle = async () => {
     await vi.waitFor(

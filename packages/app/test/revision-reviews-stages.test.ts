@@ -11,6 +11,7 @@ import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { TtsPort } from "../src/kernel/ports/tts.js";
 import { setProjectPaused } from "../src/slices/admission/repo.js";
 import { needsAttention } from "../src/slices/agents/attention.js";
+import { changeCheckpoints } from "../src/slices/checkpoints/change.js";
 import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
 import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import {
@@ -19,6 +20,7 @@ import {
 } from "../src/slices/reviews/external-repo.js";
 import { externalReviewById } from "../src/slices/reviews/external-rows.js";
 import { reviewStanding, waitingExternalReviews } from "../src/slices/reviews/external-waiting.js";
+import { projectHolds } from "../src/slices/reviews/holds.js";
 import { actOnVerdict, pendingRedos } from "../src/slices/reviews/repo.js";
 import { markUploaded } from "../src/slices/uploads/repo.js";
 import { current } from "./revision-rebuild.fake.js";
@@ -659,6 +661,132 @@ it("stops a run a restart cut off while an agent reviews, and an agent continues
       ),
     ).toHaveLength(1);
   } finally {
+    h.close();
+  }
+});
+
+// A video made ahead waits at its schedule's own Before Video hold, its narration voiced from an
+// article written in the run. The one step that stood in for the narration's chunks until the
+// article was written (`audio:body:future`) never runs itself; the version it was planned under
+// kept reserving it after the chunks unfolded, a restart held it with every unfinished step, and
+// Continue the run, which admits only what the plan still lists, never released it: the video
+// read Stopped instead of Waiting for its day, and its day would not have rendered it. The run
+// lets the placeholder go once it has unfolded, and a project an older version left holding it
+// recovers on Continue, voicing nothing again.
+it("reads a made-ahead video a restart stopped as Waiting for its day after Continue, and its day renders it", {
+  timeout: 30_000,
+}, async () => {
+  let release: () => void = () => undefined;
+  const voicing = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let spoken = 0;
+  const voice = fakeTts({ bytesFor: () => [quiet(10)] });
+  const tts: TtsPort = {
+    ...voice,
+    synthesize: async (request) => {
+      spoken += 1;
+      await voicing;
+      return voice.synthesize(request);
+    },
+  };
+  const { h, deps, settle } = await reviewedRun({
+    fail: () => undefined,
+    tts,
+    unsettled: true,
+    config: (base) => ({
+      ...articleConfig(base),
+      sources: {
+        ...articleConfig(base).sources,
+        images: base.sources.images,
+        audio: "generate",
+        video: "generate",
+      },
+      audio: { provider: "openai-tts", model: "tts", voice: "first" },
+      chunking: { mode: "whole" },
+      motionStyle: "still",
+    }),
+    // The narration's review waits for the word timing behind the video's hold, so the Audio
+    // stage is still unfinished while the video waits for its day.
+    reviews: { retries: 0, stages: { narration: { mode: "flag" } } },
+  });
+  try {
+    const head = () => current(deps, h.projectId).revision.id;
+    const future = () =>
+      deps.db
+        .prepare(
+          "SELECT * FROM revision_work_reservations WHERE revision_id=? AND work_key='audio:body:future'",
+        )
+        .get(head());
+    // The article is written and its narration is being voiced; the schedule puts its own
+    // hold before the video (`schedules/prepare.ts`).
+    await vi.waitFor(() => expect(spoken).toBe(1), { timeout: 20_000 });
+    const held = changeCheckpoints(deps, {
+      projectId: h.projectId,
+      revisionId: head(),
+      stages: ["video"],
+    });
+    if (!held.ok) throw new Error(JSON.stringify(held));
+    deps.db
+      .prepare(
+        "INSERT INTO prepared_videos(project_id,schedule_id,title,added_checkpoint,prepared_at) VALUES (?,'s1','Saved',1,'2026-09-10T00:00:00.000Z')",
+      )
+      .run(h.projectId);
+    release();
+    await settle();
+    const holds = () => projectHolds(deps.db, { projectId: h.projectId });
+    expect(holds()).toMatchObject({ prepared: new Set([h.projectId]), stopped: new Set() });
+    // Unfolded into the chunk it stood for, the placeholder is no longer the head's.
+    expect(future()).toBeUndefined();
+    // As 4.5.3 and earlier left it: still reserved on the head, for what the head still names.
+    const desired = current(deps, h.projectId).revision.fingerprints["audio:body:future"];
+    expect(desired).toBeDefined();
+    deps.db
+      .prepare(
+        `INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,piece_id,fingerprint,logical_key,desired_fingerprint)
+         SELECT w.project_id,?,p.work_key,w.id,p.id,p.fingerprint,p.work_key,? FROM revision_work w
+         JOIN revision_work_pieces p ON p.work_id=w.id
+         WHERE w.project_id=? AND p.work_key='audio:body:future' AND w.recipe_context IS NOT NULL`,
+      )
+      .run(head(), desired ?? null, h.projectId);
+    expect(future()).toBeDefined();
+    // What boot does before anything runs (`main.ts`): the restart stops the run.
+    recoverCheckpointWork(deps.db);
+    expect(holds().stopped).toEqual(new Set([h.projectId]));
+    expect(
+      await recoverProject(deps, h.projectId, {
+        baseRevisionId: head(),
+        idempotencyKey: randomUUID(),
+        action: { kind: "resume" },
+      }),
+    ).toMatchObject({ ok: true });
+    await settle();
+    expect(holds()).toMatchObject({ prepared: new Set([h.projectId]), stopped: new Set() });
+    expect(future()).toBeUndefined();
+    expect(
+      needsAttention({ ...deps, log: { write: () => undefined } }, new Date()).map(
+        (entry) => entry.kind,
+      ),
+    ).not.toContain("stopped-run");
+    // Its day takes the schedule's hold away (`continuePrepared`), and the video renders.
+    const day = changeCheckpoints(deps, { projectId: h.projectId, revisionId: head(), stages: [] });
+    if (!day.ok) throw new Error(JSON.stringify(day));
+    deps.db.prepare("DELETE FROM prepared_videos WHERE project_id=?").run(h.projectId);
+    deps.runner.tick(h.projectId);
+    await settle();
+    expect(
+      current(deps, h.projectId).outputs.filter(
+        (row) =>
+          row.workKey === "export:video" &&
+          row.output.role === "video" &&
+          row.selected &&
+          row.state === "ready",
+      ),
+    ).toHaveLength(1);
+    // The narration was voiced once: neither Continue nor the day voiced it again.
+    expect(spoken).toBe(1);
+  } finally {
+    release();
     h.close();
   }
 });

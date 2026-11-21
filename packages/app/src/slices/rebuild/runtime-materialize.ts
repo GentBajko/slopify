@@ -33,7 +33,15 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
       )
       .all(projectId, head)
       .map((row) => reservation.parse(row));
-    const origins = new Map(reservations.map((row) => [row.origin_revision, row]));
+    // The versions whose plans say what the head's admitted work unfolds into: those of its
+    // allowed steps, and those of the placeholders a restart held (`retireUnfolded`).
+    const origins = new Map<
+      string,
+      { readonly origin_revision: string; readonly recipe_context: string }
+    >(reservations.map((row) => [row.origin_revision, row]));
+    const placeholders = waitingPlaceholders(deps, projectId, head);
+    for (const row of placeholders)
+      if (!origins.has(row.origin_revision)) origins.set(row.origin_revision, row);
     // The head's view, read once: each narration part used to read the whole version again.
     let headView: ReturnType<typeof getRevisionView> | null = null;
     const headOnce = () => {
@@ -133,8 +141,82 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
           anchor.admission_id,
         );
       }
+      retireUnfolded(deps, head, origin.origin_revision, plan, placeholders);
     }
   });
+}
+
+const placeholderRow = z.object({
+  work_id: z.string(),
+  work_key: z.string(),
+  origin_revision: z.string(),
+  recipe_context: z.string(),
+});
+type Placeholder = z.infer<typeof placeholderRow>;
+
+// The head's `:future` placeholders a run admitted that still keep their stage unfinished
+// (`admittedUnfinished`), waiting and never begun: no attempt, nothing sent. Allowed or held
+// alike: a restart holds every unfinished step. One of a finished stage holds nothing up, and
+// its version isn't planned again for it on every pass.
+function waitingPlaceholders(
+  deps: RevisionDeps,
+  projectId: string,
+  head: string,
+): readonly Placeholder[] {
+  return deps.db
+    .prepare(
+      `SELECT r.work_id,r.work_key,w.revision_id AS origin_revision,w.recipe_context
+       FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id
+       JOIN revision_work_pieces p ON p.id=r.piece_id AND p.work_id=w.id
+       WHERE r.project_id=? AND r.revision_id=? AND r.work_key LIKE '%:future'
+         AND w.state='pending' AND w.recipe_context IS NOT NULL
+         AND EXISTS (SELECT 1 FROM stages s WHERE s.project_id=w.project_id AND s.id=w.stage_id
+           AND s.state NOT IN ('done','provided','skipped'))
+         AND json_extract(p.input_json,'$.kind')='deferred'
+         AND NOT EXISTS (SELECT 1 FROM attempts a WHERE a.work_id=w.id)
+         AND NOT EXISTS (SELECT 1 FROM revision_work_pieces q WHERE q.work_id=w.id
+           AND (q.submitted_at IS NOT NULL OR q.continuation IS NOT NULL))`,
+    )
+    .all(projectId, head)
+    .map((row) => placeholderRow.parse(row));
+}
+
+// A `:future` step stands in for work not known yet (a narration's chunks before its text is
+// written) and never runs itself (`runtime-run.ts`). Once its version's plan has unfolded it,
+// no step of that key deferred any more and every step it stood for reserved on the head, it
+// is a leftover the head lets go of. Kept, a restart held it (`recoverWork`), and Continue the
+// run, which admits only what the plan still lists, never released it: the run read Stopped
+// with nothing left to make. Nothing runs or is paid for: only the head's reservation of a
+// step that never started goes, and the step stays in its own version's history.
+function retireUnfolded(
+  deps: RevisionDeps,
+  head: string,
+  origin: string,
+  plan: ReturnType<typeof executionPlan>,
+  placeholders: readonly Placeholder[],
+): void {
+  const reserved = (key: string) =>
+    deps.db
+      .prepare("SELECT 1 FROM revision_work_reservations WHERE revision_id=? AND work_key=?")
+      .get(head, key) !== undefined;
+  for (const row of placeholders) {
+    if (row.origin_revision !== origin) continue;
+    if (plan.recipes.some((recipe) => recipe.key === row.work_key && recipe.deferred)) continue;
+    const waiting = plan.recipes.some(
+      (recipe) =>
+        recipe.key !== row.work_key &&
+        !recipe.deferred &&
+        futureKey(recipe) === row.work_key &&
+        plan.work.some((work) => work.key === recipe.key) &&
+        !reserved(recipe.key),
+    );
+    if (waiting) continue;
+    deps.db
+      .prepare(
+        "DELETE FROM revision_work_reservations WHERE revision_id=? AND work_key=? AND work_id=?",
+      )
+      .run(head, row.work_key, row.work_id);
+  }
 }
 
 // Only a row nothing has touched: still pending, one unsent piece, no attempt. Anything
